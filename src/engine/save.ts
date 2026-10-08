@@ -21,6 +21,12 @@ export type SaveData = {
   tutorialDone: boolean
   playerName: string
   leaderboard: ScoreEntry[]
+  /** Best score across all modes on this device. */
+  best: number
+  /** Best daily-tower score and the day it belongs to. */
+  dailyDay: string
+  dailyBest: number
+  plays: number
 }
 
 export const SAVE_KEY = 'game3d.save'
@@ -38,13 +44,18 @@ export function defaultSave(): SaveData {
     quality: 'high',
     reducedMotion: false,
     tutorialDone: false,
-    playerName: 'PLAYER',
+    playerName: '',
     leaderboard: [],
+    best: 0,
+    dailyDay: '',
+    dailyBest: 0,
+    plays: 0,
   }
 }
 
 const clamp01 = (v: unknown, fallback: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback)
 
+const nonNegInt = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.min(1e7, Math.floor(v)) : 0)
 /** Parse untrusted stored JSON into a valid SaveData (pure; unit tested). */
 export function parseSave(raw: string | null): SaveData {
   const base = defaultSave()
@@ -75,6 +86,10 @@ export function parseSave(raw: string | null): SaveData {
       .filter((e): e is ScoreEntry => !!e && typeof e === 'object' && typeof (e as ScoreEntry).name === 'string' && Number.isFinite((e as ScoreEntry).score))
       .map(e => ({ name: e.name.slice(0, 16), score: Math.max(0, Math.floor(e.score)), seconds: Number.isFinite(e.seconds) ? e.seconds : 0, at: Number.isFinite(e.at) ? e.at : 0 }))
       .slice(0, LEADERBOARD_SIZE),
+    best: nonNegInt(data.best),
+    dailyDay: typeof data.dailyDay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.dailyDay) ? data.dailyDay : '',
+    dailyBest: nonNegInt(data.dailyBest),
+    plays: nonNegInt(data.plays),
   }
 }
 

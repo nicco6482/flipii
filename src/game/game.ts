@@ -1,91 +1,169 @@
 import * as THREE from 'three'
 import type { Audio } from '../engine/audio'
 import type { Input } from '../engine/input'
-import { Physics, RAPIER } from '../engine/physics'
 import type { Renderer } from '../engine/renderer'
 import type { Quality } from '../engine/save'
-import { FollowCamera } from './camera'
-import { Collectibles } from './collectibles'
-import { CONFIG } from './config'
-import { tuning } from './tuning'
-import { Drones } from './drones'
-import { Effects } from './fx'
-import { Player, type PlayerEvent } from './player'
-import { collect, createRun, damage, tick, type RunState } from './rules'
-import { World } from './world'
+import { TOTAL_FLOORS } from '../../server/helix-rules.mjs'
+import { Fx } from './fx'
+import { generateTower, type Tower } from './level'
+import { BALL_RADIUS, Sim, floorY, type SimEvent } from './sim'
+import { BALL, DANGER, THEMES, type Theme } from './theme'
+import { RING_INNER, RING_OUTER, TowerView } from './tower'
 
-export type Mode = 'attract' | 'playing' | 'paused' | 'ended'
-export type Hint = 'move' | 'look' | 'jump' | 'dash' | 'cores'
-export type Compass = { angle: number; distance: number; rise: number }
+export type Mode = 'title' | 'playing' | 'paused' | 'ended'
+export type RunKind = 'daily' | 'practice'
 
-export type GameHooks = {
-  popup(text: string, screen: { x: number; y: number }, kind: 'score' | 'hurt'): void
-  hurt(): void
-  hint(hint: Hint | null): void
-  /** The first-run tutorial reached its last step. */
-  tutorialDone(): void
-  end(run: RunState): void
+export type RunResult = {
+  kind: RunKind
+  seed: number
+  seedDay: string
+  score: number
+  floors: number
+  durationMs: number
+  outcome: 'dead' | 'won'
+  bestChain: number
+  smashes: number
+  nearMisses: number
+  stage: number
 }
 
-/**
- * One playable scene: owns world, physics, player, camera, enemies and the run rules, and
- * translates simulation events into audio, particles and UI hooks. `main.ts` drives it from the
- * fixed-step loop; the UI never reaches inside.
- */
+export type GameEvents = {
+  /** Floating text near the ball. kind styles it. */
+  popup: (text: string, kind: 'score' | 'combo' | 'near' | 'smash' | 'stage' | 'danger' | 'best' | 'target') => void
+  flash: (color: string, strength: number) => void
+  smashMode: (on: boolean) => void
+  chain: (chain: number) => void
+  stage: (stage: number, theme: Theme) => void
+  scored: (score: number) => void
+  end: (run: RunResult) => void
+  startRequest: () => void
+}
+
+const BALL_ORBIT = (RING_INNER + RING_OUTER) / 2
+const TRAIL = 14
+
 export class Game {
-  mode: Mode = 'attract'
-  run: RunState
+  readonly scene = new THREE.Scene()
+  readonly camera = new THREE.PerspectiveCamera(52, 16 / 9, 0.1, 200)
+  mode: Mode = 'title'
   reducedMotion = false
-  private readonly physics: Physics
-  private readonly world: World
-  private readonly player: Player
-  private readonly cam: FollowCamera
-  private readonly cores: Collectibles
-  private readonly drones: Drones
-  private readonly fx = new Effects()
-  private simTime = 0
-  private time = 0
-  private tutorial: Hint | null = null
-  private tutorialStart = new THREE.Vector3()
-  private readonly down = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: -1, z: 0 })
+  kind: RunKind = 'daily'
+  seedDay = ''
+  /** Allow a rotate input on the title screen to start the run (off while menus are open). */
+  attractStarts = true
+  personalBest = 0
+  targetScore = 0
+  sim!: Sim
+  private tower!: Tower
+  private towerView!: TowerView
+  private fx = new Fx()
+  private ball: THREE.Mesh
+  private ballMat: THREE.MeshStandardMaterial
+  private trail: THREE.InstancedMesh
+  private trailPts: THREE.Vector3[] = []
+  private sky: THREE.Mesh
+  private decor = new THREE.Group()
+  private hemi: THREE.HemisphereLight
+  private sun: THREE.DirectionalLight
+  private camY = 0
+  private camFocus = 0
+  private shake = 0
+  private fovKick = 0
+  private squash = 0
+  private hitstop = 0
+  private slowmo = 0
+  private themeFrom: Theme = THEMES[0]
+  private themeTo: Theme = THEMES[0]
+  private themeT = 1
+  private deathTimer = -1
+  private bestAnnounced = false
+  private targetAnnounced = false
+  private skyColors!: THREE.BufferAttribute
+  private skyY!: Float32Array
+  private seed = 0
+  private lastRenderedFloor = -1
 
-  constructor(
-    private readonly renderer: Renderer,
-    private readonly input: Input,
-    private readonly audio: Audio,
-    private readonly hooks: GameHooks,
-  ) {
-    this.physics = new Physics(CONFIG.player.gravity)
-    this.world = new World(this.physics, renderer.shadowMapSize)
-    this.player = new Player(this.physics, this.world.spawn, this.world.movers)
-    this.cam = new FollowCamera(this.physics, this.player.collider)
-    this.cores = new Collectibles(this.world.coreSpots)
-    this.drones = new Drones(this.physics, this.world.droneRoutes)
-    this.world.scene.add(this.player.root, this.player.shadowMesh, this.cores.group, this.drones.group, this.fx.mesh)
-    this.run = createRun(this.cores.total)
-    this.cam.reset(this.world.spawn, 0.6)
+  constructor(private readonly renderer: Renderer, private readonly input: Input, private readonly audio: Audio, private readonly events: GameEvents) {
+    this.scene.fog = new THREE.Fog(THEMES[0].fog, 14, 46)
+    this.hemi = new THREE.HemisphereLight('#ffffff', THEMES[0].skyLow, 1.35)
+    this.scene.add(this.hemi)
+    this.sun = new THREE.DirectionalLight('#fff4e0', 2.1)
+    this.sun.castShadow = true
+    this.sun.shadow.camera.left = -4
+    this.sun.shadow.camera.right = 4
+    this.sun.shadow.camera.top = 4
+    this.sun.shadow.camera.bottom = -4
+    this.sun.shadow.camera.near = 1
+    this.sun.shadow.camera.far = 30
+    this.sun.shadow.bias = -0.002
+    this.scene.add(this.sun, this.sun.target)
+
+    this.ballMat = new THREE.MeshStandardMaterial({ color: BALL, flatShading: true, roughness: 0.3, emissive: new THREE.Color('#ff6a00'), emissiveIntensity: 0 })
+    this.ball = new THREE.Mesh(new THREE.IcosahedronGeometry(BALL_RADIUS, 1), this.ballMat)
+    this.ball.castShadow = true
+    this.scene.add(this.ball)
+    this.trail = new THREE.InstancedMesh(
+      new THREE.IcosahedronGeometry(BALL_RADIUS, 0),
+      new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.35, depthWrite: false }),
+      TRAIL,
+    )
+    this.trail.frustumCulled = false
+    this.scene.add(this.trail)
+
+    this.sky = this.buildSky()
+    this.scene.add(this.sky)
+    this.buildDecor()
+    this.scene.add(this.decor)
+    this.scene.add(this.fx.group)
+    this.setQuality('high')
+    this.newRun('daily', 0, '')
   }
 
-  get camera(): THREE.PerspectiveCamera {
-    return this.cam.camera
-  }
-
-  /** Begin (or restart) a run. `tutorial` shows first-time control hints. */
-  start(tutorial: boolean): void {
-    tuning.activate('run')
-    this.cores.reset()
+  /** Build (or rebuild) the tower for a seed and park the ball on the first floor. */
+  newRun(kind: RunKind, seed: number, seedDay: string): void {
+    this.kind = kind
+    this.seedDay = seedDay
+    if (!this.tower || seed !== this.seed) {
+      this.seed = seed
+      this.tower = generateTower(seed)
+      if (this.towerView) {
+        this.towerView.setTower(this.tower)
+      } else {
+        this.towerView = new TowerView(this.tower)
+        this.scene.add(this.towerView.root)
+      }
+    } else this.towerView.setTower(this.tower)
     this.fx.clear()
-    this.player.teleport(this.world.spawn)
-    this.player.facing = 0
-    this.cam.pitch = 0.42
-    this.cam.reset(this.world.spawn, 0)
-    this.run = { ...createRun(this.cores.total), unranked: tuning.unranked }
+    this.sim = new Sim(this.tower)
+    this.towerView.ensure(0)
+    this.lastRenderedFloor = 0
+    this.camFocus = this.sim.y - 1.4
+    this.camY = this.camFocus
+    this.themeFrom = this.themeTo = THEMES[0]
+    this.themeT = 1
+    this.applyTheme(THEMES[0])
+    this.audio.stage = 0
+    this.deathTimer = -1
+    this.bestAnnounced = false
+    this.targetAnnounced = false
+    this.trailPts = []
+    this.ball.visible = true
+    this.ball.scale.setScalar(1)
+    this.events.smashMode(false)
+    this.events.chain(0)
+  }
+
+  start(kind: RunKind, seed: number, seedDay: string): void {
+    this.newRun(kind, seed, seedDay)
     this.mode = 'playing'
-    this.input.endFrame()
-    this.input.takeLook()
-    this.tutorial = tutorial ? 'move' : null
-    this.tutorialStart.copy(this.world.spawn)
-    this.hooks.hint(this.tutorial)
+    this.audio.intensity = 1
+    this.audio.play('start')
+  }
+
+  toTitle(kind: RunKind, seed: number, seedDay: string): void {
+    this.newRun(kind, seed, seedDay)
+    this.mode = 'title'
+    this.audio.intensity = 0
   }
 
   pause(): void {
@@ -93,192 +171,298 @@ export class Game {
   }
 
   resume(): void {
-    if (this.mode !== 'paused') return
-    this.mode = 'playing'
-    this.input.endFrame()
-    this.input.takeLook()
+    if (this.mode === 'paused') this.mode = 'playing'
   }
 
-  toTitle(): void {
-    this.mode = 'attract'
-    this.hooks.hint(null)
+  setQuality(q: Quality): void {
+    this.renderer.applyQuality(q)
+    const shadows = q !== 'low'
+    this.sun.castShadow = shadows
+    this.sun.shadow.mapSize.set(this.renderer.shadowMapSize, this.renderer.shadowMapSize)
+    this.sun.shadow.map?.dispose()
+    this.sun.shadow.map = null
+    this.fx.density = q === 'low' ? 0.5 : q === 'medium' ? 0.8 : 1
+    this.decor.visible = q !== 'low'
+    if (this.towerView) this.towerView.shadows = shadows
   }
 
-  setQuality(quality: Quality): void {
-    this.renderer.applyQuality(quality)
-    const size = this.renderer.shadowMapSize
-    const shadow = this.world.sun.shadow
-    shadow.map?.dispose()
-    shadow.map = null
-    shadow.mapSize.set(size, size)
-    // Shadow support is compiled into shaders: recompile after toggling shadows at runtime.
-    this.world.scene.traverse(obj => {
-      const material = (obj as THREE.Mesh).material
-      for (const m of Array.isArray(material) ? material : material ? [material] : []) m.needsUpdate = true
+  /** One fixed simulation step. */
+  step(dt: number): void {
+    if (this.mode === 'paused') return
+    this.fx.step(dt)
+    if (this.hitstop > 0) {
+      this.hitstop -= dt
+      return
+    }
+    let scale = 1
+    if (this.slowmo > 0) {
+      this.slowmo -= dt
+      scale = 0.35
+    }
+    if (this.mode === 'title') {
+      // Attract: the ball bounces on the first floor; any rotate input starts the run.
+      const drag = this.input.takeDrag()
+      if (this.attractStarts && (this.input.turn !== 0 || Math.abs(drag) > 0.01)) {
+        this.events.startRequest()
+        if ((this.mode as Mode) === 'playing') this.sim.phi += drag
+        return
+      }
+      this.sim.step(dt, 0, 0)
+      return
+    }
+    if (this.mode === 'ended') {
+      this.sim.step(dt, 0, 0)
+      if (this.deathTimer > 0) this.deathTimer -= dt
+      return
+    }
+    const drag = this.input.takeDrag()
+    const events = this.sim.step(dt * scale, this.input.turn, drag)
+    for (const e of events) this.handle(e)
+  }
+
+  private handle(e: SimEvent): void {
+    const s = this.sim
+    const motion = this.reducedMotion ? 0.35 : 1
+    switch (e.type) {
+      case 'bounce': {
+        this.squash = 1
+        this.audio.play('bounce', e.floor)
+        this.towerView.splat(e.floor, s.ballAngle, THEMES[this.tower.floors[e.floor].stage].accent)
+        this.fx.burst(new THREE.Vector3(0, floorY(e.floor) + 0.05, BALL_ORBIT), Math.round(6 * this.fx.density), '#ffffff', 2.2)
+        this.events.chain(0)
+        if (e.points > 0) {
+          this.audio.play('near')
+          this.events.popup(`+${e.points}`, 'near')
+          this.events.flash('#ffe36e', 0.25 * motion)
+          this.slowmo = 0.12
+          this.shake = Math.max(this.shake, 0.08 * motion)
+        }
+        break
+      }
+      case 'pass': {
+        const v = this.towerView.markBroken(e.floor)
+        if (v) this.fx.shatterFloor(v.spec, s.phi, 1)
+        this.audio.play('pass', e.chain)
+        this.events.popup(e.chain > 1 ? `+${e.points} ×${Math.min(e.chain, 8)}` : `+${e.points}`, e.chain > 1 ? 'combo' : 'score')
+        this.events.chain(e.chain)
+        this.shake = Math.max(this.shake, (0.05 + 0.03 * e.chain) * motion)
+        if (e.chain >= 2) this.events.flash(THEMES[this.sim.stage].accent, Math.min(0.12 + e.chain * 0.05, 0.35) * motion)
+        break
+      }
+      case 'smashOn':
+        this.audio.play('smashOn')
+        this.audio.intensity = 2
+        this.events.smashMode(true)
+        break
+      case 'smash': {
+        const v = this.towerView.markBroken(e.floor)
+        if (v) this.fx.shatterFloor(v.spec, s.phi, 2)
+        this.audio.play('smash')
+        this.audio.intensity = 1
+        this.events.smashMode(false)
+        this.events.chain(0)
+        this.events.popup(`+${e.points}`, 'smash')
+        this.events.flash('#ffffff', 0.6 * motion)
+        this.shake = Math.max(this.shake, 0.45 * motion)
+        this.fovKick = 1
+        this.hitstop = 0.06
+        break
+      }
+      case 'stage': {
+        this.audio.play('stage')
+        this.events.popup(`+${e.points}`, 'stage')
+        const next = Math.min(e.stage + 1, THEMES.length - 1)
+        if (e.stage + 1 < THEMES.length) {
+          this.themeFrom = this.currentTheme()
+          this.themeTo = THEMES[next]
+          this.themeT = 0
+          this.audio.stage = next
+          this.events.stage(next, THEMES[next])
+        }
+        break
+      }
+      case 'death': {
+        this.audio.play('death')
+        this.audio.intensity = 0
+        this.fx.shatterBall(this.ball.position.clone())
+        this.ball.visible = false
+        this.events.flash(DANGER, 0.55 * motion)
+        this.events.popup('', 'danger')
+        this.shake = 0.5 * motion
+        this.slowmo = 0.35
+        this.finish('dead')
+        break
+      }
+      case 'win':
+        this.audio.play('win')
+        this.audio.intensity = 0
+        this.events.popup(`+${e.points}`, 'stage')
+        this.events.flash('#ffe38a', 0.5 * motion)
+        for (let i = 0; i < 4; i += 1) this.fx.burst(new THREE.Vector3((Math.random() - 0.5) * 4, floorY(TOTAL_FLOORS) + 1 + i, (Math.random() - 0.5) * 4), 60, ['#ffd35c', '#7ef9ff', '#ff9bf5', '#9effa0'][i], 9)
+        this.finish('won')
+        break
+    }
+    if (e.type !== 'bounce' || e.points) this.events.scored(this.sim.score)
+    if (this.personalBest > 0 && !this.bestAnnounced && this.sim.score > this.personalBest) {
+      this.bestAnnounced = true
+      this.audio.play('best')
+      this.events.popup('', 'best')
+    }
+    if (this.targetScore > 0 && !this.targetAnnounced && this.sim.score > this.targetScore) {
+      this.targetAnnounced = true
+      this.audio.play('best')
+      this.events.popup('', 'target')
+    }
+  }
+
+  private finish(outcome: 'dead' | 'won'): void {
+    this.mode = 'ended'
+    this.events.smashMode(false)
+    const s = this.sim
+    this.events.end({
+      kind: this.kind,
+      seed: this.seed,
+      seedDay: this.seedDay,
+      score: s.score,
+      floors: s.floors,
+      durationMs: Math.floor(s.time * 1000),
+      outcome,
+      bestChain: s.bestChain,
+      smashes: s.smashes,
+      nearMisses: s.nearMisses,
+      stage: s.stage,
     })
   }
 
-  step(dt: number): void {
-    this.simTime += dt
-    // Presses are always consumed so a jump pressed in a menu never fires on resume.
-    const jumpPressed = this.input.consume('jump')
-    const dashPressed = this.input.consume('dash')
-    const playing = this.mode === 'playing'
-    const rage = playing && this.run.timeLeft <= CONFIG.drones.rageAt
-
-    this.world.stepMovers(this.simTime)
-    const events: PlayerEvent[] = []
-    if (playing) {
-      this.player.step(
-        dt,
-        {
-          moveX: this.input.move.x,
-          moveY: this.input.move.y,
-          sprint: this.input.held('sprint'),
-          jumpPressed,
-          jumpHeld: this.input.held('jump'),
-          dashPressed,
-        },
-        this.cam.yaw,
-        events,
-      )
-    }
-    this.drones.step(dt, rage)
-    this.physics.step(dt)
-    if (!playing) return
-    this.run.unranked ||= tuning.unranked
-
-    const pos = this.player.position
-    for (const e of events) this.onPlayerEvent(e, pos)
-
-    for (const at of this.cores.collect(pos, CONFIG.player.radius + 0.75)) {
-      const result = collect(this.run)
-      this.run = result.state
-      this.audio.play('pickup')
-      this.fx.burst(at, '#ffd35c', 26, 7)
-      const combo = this.run.combo > 1 ? `  ×${this.run.combo}` : ''
-      this.hooks.popup(`+${result.points}${combo}`, this.project(at), 'score')
-      if (this.tutorial === 'cores') {
-        this.advanceTutorial(null)
-        this.hooks.tutorialDone()
-      }
-    }
-
-    const hitFrom = this.drones.hits(pos, CONFIG.player.radius)[0]
-    if (hitFrom) {
-      const result = damage(this.run)
-      if (result.hurt) {
-        this.run = result.state
-        this.player.knockback(hitFrom)
-        this.onHurt(pos)
-      }
-    }
-
-    if (pos.y < CONFIG.run.killY) {
-      this.run = damage(this.run, true).state
-      this.onHurt(pos)
-      if (this.run.phase === 'playing') {
-        this.player.teleport(this.player.safe)
-        this.cam.reset(this.player.safe)
-      }
-    }
-
-    this.run = tick(this.run, dt)
-    this.updateTutorial(pos)
-    if (this.run.phase !== 'playing') {
-      this.mode = 'ended'
-      this.hooks.hint(null)
-      this.audio.play(this.run.phase === 'won' ? 'win' : 'lose')
-      if (this.run.phase === 'won') this.fx.burst(pos.clone().setY(pos.y + 1), '#7ef9ff', 60, 10)
-      this.hooks.end(this.run)
-    }
+  private currentTheme(): Theme {
+    return this.themeTo
   }
 
   render(alpha: number, frameSeconds: number): void {
-    this.time += frameSeconds
-    this.physics.sync(alpha)
-    const target = this.player.root.position
-    if (this.mode === 'attract') {
-      // Slow establishing orbit around the archipelago; the title menu sits on the left third.
-      const t = this.time * 0.045 + 0.9
-      const cam = this.cam.camera
-      cam.position.set(Math.sin(t) * 34, 15 + Math.sin(this.time * 0.2) * 1.5, -8 + Math.cos(t) * 34)
-      cam.lookAt(Math.sin(t + 1.9) * 6, 3, -8 + Math.cos(t + 1.9) * 6)
-    } else {
-      const look = this.mode === 'playing' ? this.input.takeLook() : { x: 0, y: 0 }
-      if (this.mode === 'playing' && this.tutorial === 'look' && Math.abs(look.x) + Math.abs(look.y) > 0.05) this.advanceTutorial('jump')
-      this.cam.update(target, look, frameSeconds, false, this.reducedMotion)
+    const s = this.sim
+    const dt = frameSeconds
+    const phi = s.prevPhi + (s.phi - s.prevPhi) * alpha
+    const y = s.prevY + (s.y - s.prevY) * alpha
+    this.towerView.root.rotation.y = phi
+    this.fx.group.rotation.y = 0
+    if (s.floor !== this.lastRenderedFloor) {
+      this.towerView.ensure(s.floor)
+      this.lastRenderedFloor = s.floor
     }
-    this.player.animate(frameSeconds, this.time, this.run.invulnerable > 0 && this.mode === 'playing', this.groundBelow(target))
-    this.cores.animate(frameSeconds)
-    this.drones.animate(frameSeconds, this.mode === 'playing' && this.run.timeLeft <= CONFIG.drones.rageAt)
-    this.fx.update(frameSeconds)
-    this.world.update(frameSeconds, target)
-    this.renderer.render(this.world.scene, this.cam.camera)
-  }
+    this.towerView.update(s.time)
+    this.fx.update(dt, alpha)
 
-  /** Direction to the nearest remaining core relative to the camera (HUD compass). */
-  compass(): Compass | null {
-    const pos = this.player.root.position
-    let best: THREE.Vector3 | undefined
-    let bestD = Infinity
-    for (const c of this.cores.remaining()) {
-      const d = c.distanceToSquared(pos)
-      if (d < bestD) {
-        bestD = d
-        best = c
-      }
+    // Ball squash & stretch.
+    this.squash = Math.max(0, this.squash - dt * 7)
+    const stretch = Math.min(0.35, Math.abs(s.vy) / 60)
+    const sq = this.squash * 0.35
+    this.ball.scale.set(1 + sq - stretch * 0.4, 1 - sq + stretch, 1 + sq - stretch * 0.4)
+    this.ball.position.set(0, y - sq * BALL_RADIUS * 0.5, BALL_ORBIT)
+    this.ball.rotation.x -= s.vy * dt * 0.4
+    const smash = s.smash && this.mode === 'playing'
+    this.ballMat.emissiveIntensity += ((smash ? 1.4 : 0) - this.ballMat.emissiveIntensity) * Math.min(1, dt * 10)
+    this.ballMat.color.set(smash ? '#ffd29a' : BALL)
+
+    // Trail while falling fast or in smash mode.
+    const showTrail = this.ball.visible && (s.vy < -9 || smash)
+    this.trailPts.unshift(this.ball.position.clone())
+    if (this.trailPts.length > TRAIL) this.trailPts.pop()
+    const m = new THREE.Matrix4()
+    const trailMat = this.trail.material as THREE.MeshBasicMaterial
+    trailMat.color.set(smash ? '#ff8a3c' : this.themeTo.accent)
+    for (let i = 0; i < TRAIL; i += 1) {
+      const p = this.trailPts[i] ?? this.ball.position
+      const k = showTrail ? 1 - i / TRAIL : 0
+      m.compose(p, new THREE.Quaternion(), new THREE.Vector3(k * 0.9, k * 1.2, k * 0.9))
+      this.trail.setMatrixAt(i, m)
     }
-    if (!best) return null
-    const toCore = Math.atan2(-(best.x - pos.x), -(best.z - pos.z))
-    let angle = toCore - this.cam.yaw
-    angle = Math.atan2(Math.sin(angle), Math.cos(angle))
-    return { angle, distance: Math.sqrt(bestD), rise: best.y - pos.y }
+    this.trail.instanceMatrix.needsUpdate = true
+
+    // Camera: follow the lowest point the ball reached (never bob up with bounces).
+    this.camFocus = Math.min(this.camFocus, y - 1.4)
+    this.camY += (this.camFocus - this.camY) * (1 - Math.exp(-dt * 9))
+    const aspect = this.camera.aspect || 1.6
+    const dist = aspect < 1 ? 10.5 * Math.pow(1 / aspect, 0.75) : 10.5
+    this.shake = Math.max(0, this.shake - dt * 1.8)
+    const sh = this.shake * this.shake * 2.2
+    this.camera.position.set((Math.random() - 0.5) * sh, this.camY + 5.4 + (Math.random() - 0.5) * sh, dist)
+    this.camera.lookAt(0, this.camY - 0.6, 0)
+    this.fovKick = Math.max(0, this.fovKick - dt * 3)
+    const fov = 52 + (smash ? 5 : 0) + this.fovKick * 6
+    if (Math.abs(this.camera.fov - fov) > 0.01) {
+      this.camera.fov += (fov - this.camera.fov) * Math.min(1, dt * 8)
+      this.camera.updateProjectionMatrix()
+    }
+    this.sun.position.set(4, this.camY + 9, 7)
+    this.sun.target.position.set(0, this.camY - 1, 0)
+    this.sky.position.set(0, this.camY, 0)
+
+    // Theme cross-fade after each stage.
+    if (this.themeT < 1) {
+      this.themeT = Math.min(1, this.themeT + dt / 1.2)
+      this.applyTheme(this.themeTo, this.themeFrom, this.themeT)
+    }
+    this.updateDecor(dt)
+    this.renderer.render(this.scene, this.camera)
   }
 
-  private onPlayerEvent(e: PlayerEvent, pos: THREE.Vector3): void {
-    const feet = pos.clone().setY(pos.y - CONFIG.player.halfHeight - CONFIG.player.radius)
-    if (e.type === 'jump') {
-      this.audio.play('jump')
-      this.fx.puff(feet, 0.3)
-      if (this.tutorial === 'jump') this.advanceTutorial('dash')
-    } else if (e.type === 'land') {
-      this.audio.play('land')
-      this.fx.puff(feet, e.impact)
-      if (e.impact > 0.5) this.cam.addShake(e.impact * 0.5)
-    } else if (e.type === 'dash') {
-      this.audio.play('dash')
-      this.fx.burst(pos, '#7ef9ff', 10, 3)
-      if (this.tutorial === 'dash') this.advanceTutorial('cores')
+  /** Screen position of the ball in CSS percent, for popups. */
+  ballScreen(): { x: number; y: number } {
+    const v = this.ball.position.clone().project(this.camera)
+    return { x: (v.x * 0.5 + 0.5) * 100, y: (-v.y * 0.5 + 0.5) * 100 }
+  }
+
+  private buildSky(): THREE.Mesh {
+    const g = new THREE.SphereGeometry(80, 16, 12)
+    const n = g.attributes.position.count
+    this.skyColors = new THREE.BufferAttribute(new Float32Array(n * 3), 3)
+    this.skyY = new Float32Array(n)
+    for (let i = 0; i < n; i += 1) this.skyY[i] = g.attributes.position.getY(i) / 80
+    g.setAttribute('color', this.skyColors)
+    return new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }))
+  }
+
+  private applyTheme(to: Theme, from: Theme = to, t = 1): void {
+    const mix = (a: string, b: string) => new THREE.Color(a).lerp(new THREE.Color(b), t)
+    const top = mix(from.sky, to.sky)
+    const low = mix(from.skyLow, to.skyLow)
+    const fog = mix(from.fog, to.fog)
+    const c = new THREE.Color()
+    for (let i = 0; i < this.skyY.length; i += 1) {
+      c.copy(low).lerp(top, THREE.MathUtils.smoothstep(this.skyY[i], -0.6, 0.7))
+      this.skyColors.setXYZ(i, c.r, c.g, c.b)
+    }
+    this.skyColors.needsUpdate = true
+    ;(this.scene.fog as THREE.Fog).color.copy(fog)
+    this.hemi.groundColor.copy(low)
+    this.decor.children.forEach((o, i) => ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).color.copy(mix(i % 2 ? from.accent : from.safe, i % 2 ? to.accent : to.safe)))
+  }
+
+  private buildDecor(): void {
+    const geos = [new THREE.OctahedronGeometry(0.5, 0), new THREE.TetrahedronGeometry(0.6, 0), new THREE.IcosahedronGeometry(0.45, 0)]
+    for (let i = 0; i < 36; i += 1) {
+      const mesh = new THREE.Mesh(geos[i % 3], new THREE.MeshStandardMaterial({ flatShading: true, roughness: 0.5, transparent: true, opacity: 0.55 }))
+      this.placeDecor(mesh, (Math.random() - 0.5) * 50)
+      mesh.userData.spin = (Math.random() - 0.5) * 1.2
+      this.decor.add(mesh)
     }
   }
 
-  private onHurt(pos: THREE.Vector3): void {
-    this.audio.play('hurt')
-    this.cam.addShake(0.8)
-    this.fx.burst(pos, '#ff4d6d', 30, 8)
-    this.hooks.hurt()
-    this.hooks.popup(`-1`, this.project(pos.clone().setY(pos.y + 1)), 'hurt')
+  private placeDecor(mesh: THREE.Object3D, dy: number): void {
+    const a = Math.random() * Math.PI * 2
+    const r = 9 + Math.random() * 14
+    mesh.position.set(Math.sin(a) * r, this.camY + dy, Math.cos(a) * r - 6)
+    mesh.scale.setScalar(0.6 + Math.random() * 1.6)
   }
 
-  private updateTutorial(pos: THREE.Vector3): void {
-    if (this.tutorial === 'move' && pos.distanceTo(this.tutorialStart) > 2.5) this.advanceTutorial(this.input.method === 'touch' ? 'jump' : 'look')
-  }
-
-  private advanceTutorial(next: Hint | null): void {
-    this.tutorial = next
-    this.hooks.hint(next)
-  }
-
-  private groundBelow(p: THREE.Vector3): number | null {
-    this.down.origin = { x: p.x, y: p.y, z: p.z }
-    const hit = this.physics.world.castRay(this.down, 30, true, undefined, undefined, this.player.collider)
-    return hit ? p.y - hit.timeOfImpact : null
-  }
-
-  project(world: THREE.Vector3): { x: number; y: number } {
-    const v = world.clone().project(this.cam.camera)
-    const canvas = this.renderer.canvas
-    return { x: ((v.x + 1) / 2) * canvas.clientWidth, y: ((1 - v.y) / 2) * canvas.clientHeight }
+  private updateDecor(dt: number): void {
+    if (!this.decor.visible) return
+    for (const o of this.decor.children) {
+      o.rotation.x += o.userData.spin * dt
+      o.rotation.y += o.userData.spin * dt * 0.7
+      o.position.y += dt * 0.4
+      if (o.position.y > this.camY + 25) this.placeDecor(o, -25 + Math.random() * -3)
+      if (o.position.y < this.camY - 30) this.placeDecor(o, 20 + Math.random() * 5)
+    }
   }
 }

@@ -106,7 +106,9 @@ export class Physics {
     const b = this.bindings.find(x => x.body === body)
     if (!b) return
     const t = body.translation()
+    const r = body.rotation()
     b.prev.set(t.x, t.y, t.z)
+    b.prevRot.set(r.x, r.y, r.z, r.w)
   }
 
   removeBody(body: RAPIER.RigidBody): void {
