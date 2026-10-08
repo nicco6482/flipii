@@ -366,3 +366,17 @@ input[type='range'] { width: 150px; accent-color: var(--gold); }
 }
 
 .is-touch .btn kbd { display: none; }
+
+/* ─── Installable mobile play ──────────────────────────────────────────── */
+@media (hover: none) and (pointer: coarse) {
+  html, body { overscroll-behavior: none; }
+  .touch-btn { width: clamp(72px, 18vw, 96px); height: clamp(72px, 18vw, 96px); }
+  .touch-btn svg { pointer-events: none; }
+  .btn, .seg button, .touch-btn { -webkit-tap-highlight-color: transparent; }
+}
+@media (max-width: 640px) and (orientation: portrait) {
+  .touch { padding-left: calc(14px + var(--safe-l)); padding-right: calc(14px + var(--safe-r)); }
+  .touch-hint { max-width: calc(100vw - 120px); font-size: 12px; text-align: center; }
+  .modal { width: min(520px, calc(100vw - 16px)); }
+  .results-card { max-height: calc(100vh - 16px - var(--safe-t) - var(--safe-b)); }
+}

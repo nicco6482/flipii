@@ -1,0 +1,19 @@
+{
+  "name": "Helix Drift — Daily Tower Drop",
+  "short_name": "Helix Drift",
+  "description": "One-input 3D helix tower drop with a daily tower and challenge sharing.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#1b1838",
+  "theme_color": "#1b1838",
+  "icons": [
+    {
+      "src": "./helix-drift-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

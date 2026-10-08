@@ -11,6 +11,7 @@ Remix del showcase suministrado **Helix Drop** sobre el proyecto inicializado `g
 - Mantener el acceso same-origin del leaderboard mediante rutas relativas; el backend queda incluido como fuente y contrato de despliegue, pero no se habilitan servicios administrados en esta fase porque el Blueprint aprobado dejó `onlineFeatures` sin provisionar.
 - Conservar `en.json` y `zh-CN.json` con claves equivalentes, fuentes Figtree/Sora/Noto Sans SC y configuración de locale guardada.
 - Reconciliar nombre de paquete, lockfile y configuración Vite con el proyecto `helixdrift`, añadiendo la dependencia de QR usada por compartir resultados.
+- Mantener los controles de toque existentes y añadir una entrega móvil instalable con `manifest.webmanifest`, icono de inicio, metadatos iOS/Android, safe areas y tamaños táctiles adaptativos en orientación vertical y horizontal.
 
 ## Estructura
 
@@ -18,6 +19,7 @@ Remix del showcase suministrado **Helix Drop** sobre el proyecto inicializado `g
 - `src/game/`: torre, niveles diarios, simulación, temas, efectos y coordinación de la partida.
 - `src/online/`: leaderboard same-origin y tarjetas/retos compartibles.
 - `src/ui/` y `src/styles/`: HUD, menús, modales, controles táctiles y estilo visual.
+- `public/manifest.webmanifest` y `public/helix-drift-icon.svg`: instalación PWA e identidad de la app móvil.
 - `server/`: reglas, contrato, migraciones y servidor de leaderboard preservados como fuente de despliegue.
 - `scripts/`: smoke/build checks del juego más la integración administrada de tuning.
 
