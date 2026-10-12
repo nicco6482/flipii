@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { handle, memoryStore } from '../server/weflipi-api.mjs'
+import { handle, memoryStore, upstashCredentials } from '../server/weflipi-api.mjs'
 import { GAMES, gameOfDay, msUntilNextDay, rankDay, seasonDays, seasonTable, today, weekStart } from '../server/weflipi-games.mjs'
 
 const NOON = Date.parse('2026-10-14T10:00:00Z') // Wednesday, 12:00 in Madrid
@@ -52,7 +52,17 @@ describe('weflipi api', () => {
 
   it('reports a missing database instead of crashing', async () => {
     const r = await handle(null, { method: 'GET', query: { a: 'state' } })
-    expect(r).toEqual({ status: 503, body: { error: 'no_database' } })
+    expect(r.status).toBe(503)
+    expect(r.body.error).toBe('no_database')
+  })
+
+  it('finds Upstash credentials under any name the integration uses', () => {
+    expect(upstashCredentials({ KV_REST_API_URL: 'https://a.upstash.io', KV_REST_API_TOKEN: 't' })).toEqual({ url: 'https://a.upstash.io', token: 't' })
+    expect(upstashCredentials({ UPSTASH_REDIS_REST_URL: 'https://b.upstash.io', UPSTASH_REDIS_REST_TOKEN: 'u' })).toEqual({ url: 'https://b.upstash.io', token: 'u' })
+    expect(upstashCredentials({ STORAGE_KV_REST_API_URL: 'https://c.upstash.io', STORAGE_KV_REST_API_TOKEN: 'v' })).toEqual({ url: 'https://c.upstash.io', token: 'v' })
+    expect(upstashCredentials({ REDIS_URL: 'rediss://default:p%40ss@d.upstash.io:6379' })).toEqual({ url: 'https://d.upstash.io', token: 'p@ss' })
+    expect(upstashCredentials({ REDIS_URL: 'redis://default:x@redis-123.cloud.redislabs.com:1234' })).toBeNull()
+    expect(upstashCredentials({ KV_REST_API_URL: 'https://e.upstash.io' })).toBeNull()
   })
 
   it('creates a group, lets a friend join and ranks today and the season', async () => {

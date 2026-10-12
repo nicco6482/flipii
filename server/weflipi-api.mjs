@@ -104,11 +104,41 @@ export function memoryStore() {
   }
 }
 
-/** Upstash via the Vercel Marketplace sets KV_REST_API_*; a manual setup uses UPSTASH_REDIS_REST_*. */
+/**
+ * Finds Upstash credentials whatever the integration called them: KV_REST_API_* (Vercel
+ * Marketplace), UPSTASH_REDIS_REST_* (manual setup), either with a custom prefix such as
+ * STORAGE_KV_REST_API_URL, or only a rediss:// URL pointing at an Upstash host.
+ */
+export function upstashCredentials(env = process.env) {
+  const keys = Object.keys(env).sort((a, b) => a.length - b.length)
+  for (const [urlSuffix, tokenSuffix] of [['KV_REST_API_URL', 'KV_REST_API_TOKEN'], ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN']]) {
+    for (const key of keys) {
+      if (!key.endsWith(urlSuffix) || !env[key]) continue
+      const token = env[key.slice(0, -urlSuffix.length) + tokenSuffix]
+      if (token) return { url: env[key], token }
+    }
+  }
+  for (const key of keys) {
+    if (!/(^|_)(KV_URL|REDIS_URL)$/.test(key) || !env[key]) continue
+    try {
+      const u = new URL(env[key])
+      // Upstash serves REST on the same host, authenticated with the Redis password.
+      if (u.hostname.endsWith('.upstash.io') && u.password) return { url: `https://${u.hostname}`, token: decodeURIComponent(u.password) }
+    } catch {
+      /* not a URL */
+    }
+  }
+  return null
+}
+
 export function storeFromEnv(env = process.env) {
-  const url = env.KV_REST_API_URL || env.UPSTASH_REDIS_REST_URL
-  const token = env.KV_REST_API_TOKEN || env.UPSTASH_REDIS_REST_TOKEN
-  return url && token ? upstashStore(url, token) : null
+  const creds = upstashCredentials(env)
+  return creds ? upstashStore(creds.url, creds.token) : null
+}
+
+/** Names (never values) of env vars that look database-related, to debug a missing connection. */
+export function databaseEnvNames(env = process.env) {
+  return Object.keys(env).filter(k => /KV|REDIS|UPSTASH/i.test(k)).sort()
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────
@@ -289,7 +319,7 @@ async function group(store, me, query, now) {
  */
 export async function handle(store, req, now = Date.now()) {
   try {
-    if (!store) fail(503, 'no_database')
+    if (!store) return { status: 503, body: { error: 'no_database', seen: databaseEnvNames() } }
     const action = req.query?.a
     const body = req.body && typeof req.body === 'object' ? req.body : {}
     if (req.method === 'GET' && action === 'state') return { status: 200, body: await state(store, req.auth, now) }

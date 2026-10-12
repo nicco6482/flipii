@@ -8,3 +8,5 @@ export declare function storeFromEnv(env?: Record<string, string | undefined>): 
 export declare function cleanName(raw: unknown, max?: number): string
 export declare function handle(store: Store | null, req: ApiRequest, now?: number): Promise<{ status: number; body: any }>
 export declare function nodeHandler(store: Store | null, req: unknown, res: unknown): Promise<void>
+export declare function upstashCredentials(env?: Record<string, string | undefined>): { url: string; token: string } | null
+export declare function databaseEnvNames(env?: Record<string, string | undefined>): string[]
