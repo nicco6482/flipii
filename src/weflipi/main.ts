@@ -3,10 +3,17 @@ import './hub.css'
 import { daySeed, gameById, gameOfDay, isBetter, msUntilNextDay, today, type GameId } from '../../server/weflipi-games.mjs'
 import * as api from './api'
 import { CATALOG } from './catalog'
+import { startCover } from './cover'
 import { mulberry, muted, run, setMuted } from './engine'
 
 const AUTHOR = 'nicco6482'
 const app = document.getElementById('app')!
+const coverCanvas = document.createElement('canvas')
+coverCanvas.className = 'cover'
+coverCanvas.setAttribute('aria-hidden', 'true')
+document.body.prepend(coverCanvas)
+const coverGames = Object.values(CATALOG)
+const cover = startCover(coverCanvas, coverGames, Math.max(0, coverGames.findIndex(x => x.id === gameOfDay(today()).id)), () => app.querySelector('.hero-space')?.getBoundingClientRect() ?? null)
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`)
 
 type View = { state: api.State | null; error: string; group: api.Group | null; groupError: string; selected: string }
@@ -80,8 +87,11 @@ function modal(title: string, body: string, onSubmit: (form: FormData) => Promis
 function renderWelcome(): void {
   app.innerHTML = `
   <main class="hub welcome">
-    <h1 class="logo">we<span>flipi</span></h1>
-    <p class="lead">Un minijuego nuevo cada día. Juega todas las veces que quieras, compite con tus amigos en grupos y gana la temporada de la semana.</p>
+    <div class="hero">
+      <h1 class="logo">we<span>flipi</span></h1>
+      <p class="tagline">Un minijuego nuevo cada día.<br />Tú, tus amigos y una temporada que ganar.</p>
+    </div>
+    <div class="hero-space" aria-hidden="true"></div>
     <form class="card" data-el="welcome">
       <label for="name">¿Cómo te llamas?</label>
       <input id="name" name="name" maxlength="16" autocomplete="nickname" placeholder="Tu apodo" required />
@@ -128,12 +138,14 @@ function renderHome(): void {
   app.innerHTML = `
   <main class="hub">
     <header class="top">
-      <h1 class="logo small">we<span>flipi</span></h1>
-      <div class="top-actions">
-        <button class="chip" data-action="sound" aria-label="Sonido">${muted() ? '🔇' : '🔊'}</button>
-        <button class="chip" data-action="rename">👤 ${esc(myName() || 'Jugador')}</button>
-      </div>
+      <button class="chip" data-action="rename">👤 ${esc(myName() || 'Jugador')}</button>
+      <button class="chip" data-action="sound" aria-label="Sonido">${muted() ? '🔇' : '🔊'}</button>
     </header>
+    <div class="hero">
+      <h1 class="logo">we<span>flipi</span></h1>
+      <p class="tagline">Un minijuego nuevo cada día.<br />Tú, tus amigos y una temporada que ganar.</p>
+    </div>
+    <div class="hero-space" aria-hidden="true"></div>
     ${offline}
     <section class="card today" style="--accent:${g.color}">
       <div class="today-head"><span class="eyebrow">Juego de hoy</span><span class="timer" data-el="timer">Cambia en ${clock(deadline - Date.now())}</span></div>
@@ -274,6 +286,7 @@ function play(id: GameId, practice: boolean): void {
     <canvas></canvas>`
   document.body.appendChild(screen)
   document.body.classList.add('is-playing')
+  cover.pause(true)
   const canvas = screen.querySelector('canvas')!
   const scoreEl = screen.querySelector<HTMLElement>('[data-score]')!
   const quit = () => {
@@ -281,6 +294,7 @@ function play(id: GameId, practice: boolean): void {
     stopGame = null
     screen.remove()
     document.body.classList.remove('is-playing')
+    cover.pause(false)
     void refresh()
   }
   screen.querySelector('[data-quit]')!.addEventListener('click', quit)

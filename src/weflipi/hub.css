@@ -18,23 +18,32 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; background: var(--ink); color: var(--cream); font-family: var(--body); -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
-body { background: radial-gradient(120% 60% at 50% 0%, #3a2f86 0%, var(--ink) 60%) fixed; }
+body { background: #14112e; }
+.cover { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; pointer-events: none; }
+.hub { position: relative; z-index: 1; }
 body.is-playing { overflow: hidden; }
 button, input { font: inherit; color: inherit; }
 h1, h2, h3, h4 { font-family: var(--display); margin: 0; }
 
 .hub { max-width: 560px; margin: 0 auto; padding: calc(14px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 16px; }
-.welcome { min-height: 100svh; justify-content: center; text-align: center; }
+.welcome { min-height: 100svh; text-align: center; }
+.hero { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 2svh; }
+.hero .logo { animation: wobble 3.2s ease-in-out infinite; transform-origin: 50% 70%; }
+.tagline { margin: 0; font-family: var(--display); font-weight: 800; font-size: clamp(15px, 4.2vw, 19px); line-height: 1.35; text-shadow: 0 2px 0 var(--ink), 0 0 18px rgba(20, 17, 46, 0.9); }
+/* Leaves the flipping card of the animated cover visible between the logo and the content. */
+.hero-space { height: clamp(260px, 44svh, 420px); flex: none; }
+.welcome .hero-space { flex: 1; min-height: 240px; }
+@keyframes wobble { 0%, 100% { transform: rotate(-2deg) scale(1); } 50% { transform: rotate(2deg) scale(1.04); } }
+@media (prefers-reduced-motion: reduce) { .hero .logo { animation: none; } }
 .welcome .card { text-align: left; }
 .lead { font-size: 17px; line-height: 1.45; margin: 0; color: var(--muted); font-weight: 600; }
 footer { text-align: center; color: var(--gold); font-weight: 800; font-size: 13px; opacity: 0.85; padding-top: 4px; }
 
-.logo { font-size: clamp(54px, 16vw, 84px); font-weight: 800; font-style: italic; letter-spacing: -0.02em; color: var(--cream); paint-order: stroke fill; -webkit-text-stroke: 0.1em var(--ink); text-shadow: 0.04em 0.06em 0 var(--ink); }
+.logo { font-size: clamp(64px, 19vw, 104px); line-height: 1; font-weight: 800; font-style: italic; letter-spacing: -0.02em; color: var(--cream); paint-order: stroke fill; -webkit-text-stroke: 0.1em var(--ink); text-shadow: 0.04em 0.06em 0 var(--ink); }
 .logo span { color: var(--gold); }
-.logo.small { font-size: 34px; }
 
 .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.top-actions { display: flex; gap: 8px; min-width: 0; }
+.top .chip { background: rgba(36, 32, 74, 0.8); backdrop-filter: blur(6px); }
 .chip { border: 2px solid var(--ink-3); background: var(--ink-2); border-radius: 999px; padding: 7px 12px; font-weight: 800; font-size: 14px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 48vw; }
 
 .card { background: var(--ink-2); border: 3px solid var(--ink); border-radius: 18px; box-shadow: 5px 6px 0 rgba(0, 0, 0, 0.35); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
