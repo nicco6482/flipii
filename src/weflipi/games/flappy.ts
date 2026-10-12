@@ -33,6 +33,9 @@ export const flappy: Factory = env => {
     dead = true
     env.sfx.noise(220, 0.09)
     env.sfx.tone(300, 400, 'sawtooth', 0.05, -220)
+    env.fx.shake(0.7)
+    env.fx.burst(BIRD_X, y, '#ffd35c', 24, 300)
+    env.fx.vibrate(120)
   }
 
   return {
@@ -66,6 +69,7 @@ export const flappy: Factory = env => {
           score += 1
           env.score(score)
           env.sfx.tone(880, 70, 'square', 0.05)
+          env.fx.burst(BIRD_X, y, '#ffffff', 6, 140)
         }
         const inX = BIRD_X + R > p.x + 3 && BIRD_X - R < p.x + PIPE_W - 3
         if (inX && (y - R < p.gap - p.size / 2 || y + R > p.gap + p.size / 2)) die()

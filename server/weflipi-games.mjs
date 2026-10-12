@@ -24,6 +24,8 @@ export const GAMES = [
   { id: 'basket', dir: 'desc', min: 0, max: 400 },
   { id: 'penaltis', dir: 'desc', min: 0, max: 20 },
   { id: 'hockey', dir: 'desc', min: 0, max: 60 },
+  { id: 'futbolin', dir: 'desc', min: 0, max: 60 },
+  { id: 'billar', dir: 'desc', min: 0, max: 300 },
 ]
 
 /**
@@ -39,7 +41,7 @@ export const ROTATIONS = [
   },
   {
     from: '2026-10-14',
-    ids: ['basket', 'toques', 'penaltis', 'colores', 'hockey', 'cortar', 'dados', 'helix', 'cronometro', 'reflejos', 'deslizar', 'apilar', 'vasos', 'coches', 'ladrillos', 'dardos', 'flappy', 'bolos', 'golf', 'calculo'],
+    ids: ['basket', 'futbolin', 'toques', 'penaltis', 'billar', 'colores', 'hockey', 'cortar', 'dados', 'helix', 'cronometro', 'reflejos', 'deslizar', 'apilar', 'vasos', 'coches', 'ladrillos', 'dardos', 'flappy', 'bolos', 'golf', 'calculo'],
   },
 ]
 

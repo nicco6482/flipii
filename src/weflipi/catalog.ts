@@ -3,6 +3,8 @@ import type { GameId } from '../../server/weflipi-games.mjs'
 import type { Factory } from './engine'
 import { apilar } from './games/apilar'
 import { basket } from './games/basket'
+import { billar } from './games/billar'
+import { futbolin } from './games/futbolin'
 import { hockey } from './games/hockey'
 import { penaltis } from './games/penaltis'
 import { calculo } from './games/calculo'
@@ -56,4 +58,6 @@ export const CATALOG: Record<GameId, GameInfo> = {
   basket: { id: 'basket', name: 'Basket', emoji: '🏀', color: '#ff7a2e', how: 'Desliza hacia arriba para tirar. Limpia vale 3, con rebote 2, y 3 seguidas duplican. El aro acaba moviéndose.', unit: n => `${n} pts`, factory: basket },
   penaltis: { id: 'penaltis', name: 'Penaltis', emoji: '🥅', color: '#2bd47d', how: '10 penaltis. Desliza para chutar; en curva hace efecto. Escuadra vale 2. El portero mejora cada tiro.', unit: n => `${n} pts`, factory: penaltis },
   hockey: { id: 'hockey', name: 'Hockey', emoji: '🏒', color: '#5b8cff', how: 'Hockey de aire contra la máquina: arrastra tu mazo y marca. Ella va cada vez más rápido. 60 s.', unit: n => `${n} ${n === 1 ? 'gol' : 'goles'}`, factory: hockey },
+  futbolin: { id: 'futbolin', name: 'Futbolín', emoji: '🏟️', color: '#34a653', how: 'Futbolín contra la máquina: desliza para mover tus barras amarillas y toca para chutar. 60 s.', unit: n => `${n} ${n === 1 ? 'gol' : 'goles'}`, factory: futbolin },
+  billar: { id: 'billar', name: 'Billar', emoji: '🎱', color: '#1fa463', how: 'Mete todas las bolas que puedas en 90 s. Arrastra atrás para apuntar; varias de un tiro suman más.', unit: n => `${n} pts`, factory: billar },
 }

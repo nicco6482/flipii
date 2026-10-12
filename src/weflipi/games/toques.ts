@@ -52,6 +52,8 @@ export const toques: Factory = env => {
         dead = true
         env.sfx.noise(200, 0.08)
         env.sfx.tone(200, 300, 'sawtooth', 0.05, -100)
+        env.fx.shake(0.6)
+        env.fx.vibrate(120)
       }
     },
     down(px, py) {
@@ -67,6 +69,8 @@ export const toques: Factory = env => {
       vx = -dx * 9 + (Math.random() - 0.5) * 60
       pop = 1
       env.sfx.tone(380 + Math.min(kicks, 30) * 12, 60, 'square', 0.06)
+      env.fx.burst(x, y + R * 0.6, '#ffffff', 8, 200)
+      env.fx.vibrate(10)
     },
     draw(g) {
       const sky = g.createLinearGradient(0, 0, 0, H)

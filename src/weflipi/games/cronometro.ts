@@ -42,6 +42,8 @@ export const cronometro: Factory = env => {
         phase = 'shown'
         shownT = 0
         env.sfx.tone(err < 100 ? 990 : err < 500 ? 660 : 300, 160, 'triangle', 0.08)
+        if (err < 100) env.fx.burst(W / 2, 300, '#2bd47d', 40, 360)
+        env.fx.vibrate(err < 100 ? 60 : 20)
       }
     },
     draw(g) {

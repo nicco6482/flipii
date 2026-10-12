@@ -83,11 +83,14 @@ export const calculo: Factory = env => {
           streak += 1
           flashGood = true
           env.sfx.tone(600 + Math.min(streak, 10) * 40, 80, 'triangle', 0.07)
+          env.fx.burst(r.x + BTN.w / 2, r.y + BTN.h / 2, '#2bd47d', 12, 220)
         } else {
           score = Math.max(0, score - 1)
           streak = 0
           flashGood = false
           env.sfx.tone(160, 200, 'sawtooth', 0.05)
+          env.fx.shake(0.35)
+          env.fx.vibrate(60)
         }
         flash = 1
         env.score(score)

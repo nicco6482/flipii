@@ -44,6 +44,11 @@ export const deslizar: Factory = env => {
     flyDir = d
     env.score(score)
     env.sfx.tone(good ? 640 + Math.min(score, 30) * 10 : 150, good ? 60 : 200, good ? 'triangle' : 'sawtooth', 0.06)
+    if (good) env.fx.burst(W / 2, 360, '#2bd47d', 10, 220)
+    else {
+      env.fx.shake(0.35)
+      env.fx.vibrate(60)
+    }
     next()
   }
 
@@ -61,6 +66,7 @@ export const deslizar: Factory = env => {
         flash = 1
         env.score(score)
         env.sfx.tone(150, 200, 'sawtooth', 0.06)
+        env.fx.vibrate(60)
         next()
       }
       if (t <= 0) env.end(score)

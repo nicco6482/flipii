@@ -108,16 +108,21 @@ export const ladrillos: Factory = env => {
             env.score(score)
           }
           env.sfx.tone(500 + (ROWS - b.row) * 60, 50, 'triangle', 0.05)
+          if (b.hp <= 0) env.fx.burst(b.x + BW / 2, b.y + BH / 2, ROW_COLORS[b.row], 10, 200)
           break
         }
       }
       if (by > H + R) {
         over = true
         env.sfx.tone(180, 400, 'sawtooth', 0.06, -100)
+        env.fx.shake(0.6)
+        env.fx.vibrate(120)
       }
       if (bricks.every(b => b.hp <= 0)) {
         flash = 1
         env.sfx.tone(880, 300, 'triangle', 0.08, 300)
+        env.fx.burst(W / 2, H / 2, undefined, 60, 450)
+        env.fx.vibrate(60)
         build()
         started = false
       }

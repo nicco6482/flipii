@@ -81,6 +81,9 @@ export const bolos: Factory = env => {
         banner = '¡STRIKE!'
         scores.push('X')
         env.sfx.tone(784, 300, 'triangle', 0.09, 400)
+        env.fx.burst(W / 2, HEAD_Y - 40, undefined, 50, 420)
+        env.fx.shake(0.6)
+        env.fx.vibrate(80)
         endFrame()
       } else {
         total += knockedNow
@@ -95,6 +98,8 @@ export const bolos: Factory = env => {
         banner = '¡SPARE!'
         scores.push(`${firstRoll}/`)
         env.sfx.tone(660, 250, 'triangle', 0.08, 300)
+        env.fx.burst(W / 2, HEAD_Y - 40, '#7ef9ff', 30, 320)
+        env.fx.vibrate(40)
       } else {
         banner = `${knockedNow} bolos`
         scores.push(`${firstRoll}·${knockedNow}`)

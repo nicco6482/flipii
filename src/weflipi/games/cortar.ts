@@ -63,6 +63,9 @@ export const cortar: Factory = env => {
         boom = 1
         env.sfx.noise(500, 0.15)
         env.sfx.tone(90, 500, 'sawtooth', 0.08, -40)
+        env.fx.shake(1)
+        env.fx.burst(th.x, th.y, '#ff9f43', 50, 500)
+        env.fx.vibrate(250)
         return
       }
       hits += 1
@@ -79,6 +82,8 @@ export const cortar: Factory = env => {
       env.score(score)
       env.sfx.noise(80, 0.07)
       env.sfx.tone(500 + hits * 120, 80, 'triangle', 0.06)
+      env.fx.vibrate(hits >= 3 ? 50 : 12)
+      if (hits >= 3) env.fx.shake(0.3)
     }
   }
 

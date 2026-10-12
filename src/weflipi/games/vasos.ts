@@ -99,7 +99,13 @@ export const vasos: Factory = env => {
         score += 1
         env.score(score)
         env.sfx.tone(784, 160, 'triangle', 0.08)
-      } else env.sfx.tone(180, 300, 'sawtooth', 0.06)
+        env.fx.burst(cupX(best), CUP_Y - 40, '#2bd47d', 24, 300)
+        env.fx.vibrate(30)
+      } else {
+        env.sfx.tone(180, 300, 'sawtooth', 0.06)
+        env.fx.shake(0.4)
+        env.fx.vibrate(100)
+      }
       phase = 'reveal'
       phaseT = 0
     },

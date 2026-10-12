@@ -67,6 +67,8 @@ export const reflejos: Factory = env => {
         penalty += PENALTY
         timer = 1.1
         env.sfx.tone(160, 260, 'sawtooth', 0.06, -60)
+        env.fx.shake(0.4)
+        env.fx.vibrate(80)
       } else if (phase === 'go') {
         last = Math.round(performance.now() - goAt)
         times.push(last)
@@ -74,6 +76,8 @@ export const reflejos: Factory = env => {
         phase = 'shown'
         timer = 1.0
         env.sfx.tone(660 + Math.max(0, 400 - last), 90, 'triangle', 0.08)
+        env.fx.burst(W / 2, H / 2 - 40, last < 250 ? '#ffd35c' : '#7ef9ff', last < 250 ? 30 : 14, 300)
+        env.fx.vibrate(20)
       }
     },
     draw(g) {

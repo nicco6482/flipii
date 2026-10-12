@@ -90,6 +90,9 @@ export const coches: Factory = env => {
           crashed = true
           env.sfx.noise(400, 0.12)
           env.sfx.tone(140, 400, 'sawtooth', 0.06, -80)
+          env.fx.shake(0.9)
+          env.fx.burst(x, PLAYER_Y + 40, '#ff9f43', 30, 380)
+          env.fx.vibrate(150)
           break
         }
       }
