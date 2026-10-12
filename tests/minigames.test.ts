@@ -7,6 +7,15 @@ import { coches } from '../src/weflipi/games/coches'
 import { dardos, dartScore } from '../src/weflipi/games/dardos'
 import { flappy } from '../src/weflipi/games/flappy'
 import { golf } from '../src/weflipi/games/golf'
+import { calculo } from '../src/weflipi/games/calculo'
+import { colores } from '../src/weflipi/games/colores'
+import { cortar } from '../src/weflipi/games/cortar'
+import { cronometro } from '../src/weflipi/games/cronometro'
+import { dados } from '../src/weflipi/games/dados'
+import { deslizar } from '../src/weflipi/games/deslizar'
+import { ladrillos } from '../src/weflipi/games/ladrillos'
+import { toques } from '../src/weflipi/games/toques'
+import { vasos } from '../src/weflipi/games/vasos'
 
 const sfx = { tone: () => undefined, noise: () => undefined }
 
@@ -73,5 +82,53 @@ describe('minigames', () => {
 
   it('apilar ends when a drop misses', async () => {
     expectValid('apilar', await play(apilar, (g, f) => f % 47 === 0 && tap(g)))
+  })
+
+  it('calculo runs a 60 s round of answers', async () => {
+    expectValid('calculo', await play(calculo, (g, f) => f % 20 === 0 && tap(g, 110 + (f % 40 ? 0 : 180), 450)))
+  })
+
+  it('dados adds up five stopped dice', async () => {
+    const score = await play(dados, (g, f) => f % 13 === 0 && tap(g))
+    expectValid('dados', score)
+    expect(score).toBeGreaterThanOrEqual(5)
+  })
+
+  it('toques counts kicks until the ball lands', async () => {
+    expect(await play(toques, (g, f) => f === 0 && tap(g, W / 2, 330))).toBe(1)
+  })
+
+  it('colores runs a 45 s round', async () => {
+    expectValid('colores', await play(colores, (g, f) => f % 15 === 0 && tap(g, f % 30 ? 110 : 290, 480)))
+  })
+
+  it('cortar ends on bombs or three dropped fruits', async () => {
+    expectValid('cortar', await play(cortar, (g, f) => {
+      if (f % 30 !== 0) return
+      g.down?.(20, 300)
+      g.move?.(200, 320)
+      g.move?.(380, 300)
+      g.up?.(380, 300)
+    }))
+  })
+
+  it('cronometro sums the error of three stops', async () => {
+    expectValid('cronometro', await play(cronometro, (g, f) => f % 60 === 0 && tap(g)))
+  })
+
+  it('deslizar runs a 30 s round of swipes', async () => {
+    expectValid('deslizar', await play(deslizar, (g, f) => {
+      if (f % 12 !== 0) return
+      g.down?.(200, 360)
+      g.up?.(f % 24 ? 320 : 80, 360)
+    }))
+  })
+
+  it('vasos ends on the first wrong cup', async () => {
+    expectValid('vasos', await play(vasos, (g, f) => f % 20 === 0 && tap(g, W / 2, 400)))
+  })
+
+  it('ladrillos ends when the ball gets past the paddle', async () => {
+    expectValid('ladrillos', await play(ladrillos, (g, f) => f === 0 && tap(g, 40, 600)))
   })
 })

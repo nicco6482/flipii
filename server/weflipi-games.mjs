@@ -12,6 +12,28 @@ export const GAMES = [
   { id: 'flappy', dir: 'desc', min: 0, max: 1_000 },
   { id: 'bolos', dir: 'desc', min: 0, max: 300 },
   { id: 'golf', dir: 'asc', min: 3, max: 30 },
+  { id: 'calculo', dir: 'desc', min: 0, max: 300 },
+  { id: 'dados', dir: 'desc', min: 5, max: 30 },
+  { id: 'toques', dir: 'desc', min: 0, max: 5_000 },
+  { id: 'colores', dir: 'desc', min: 0, max: 300 },
+  { id: 'cortar', dir: 'desc', min: 0, max: 5_000 },
+  { id: 'cronometro', dir: 'asc', min: 0, max: 30_000 },
+  { id: 'deslizar', dir: 'desc', min: 0, max: 300 },
+  { id: 'vasos', dir: 'desc', min: 0, max: 100 },
+  { id: 'ladrillos', dir: 'desc', min: 0, max: 20_000 },
+]
+
+/**
+ * Rotation schedule. Each entry runs from its `from` day until the next entry starts, cycling
+ * through `ids` one per day. New games join with a new entry starting on a future day, so the
+ * game of any past or current day never changes (scores already saved stay valid).
+ */
+export const ROTATIONS = [
+  { from: '2026-01-01', ids: ['helix', 'reflejos', 'apilar', 'coches', 'dardos', 'flappy', 'bolos', 'golf'] },
+  {
+    from: '2026-10-13',
+    ids: ['calculo', 'toques', 'dados', 'colores', 'helix', 'cortar', 'cronometro', 'reflejos', 'deslizar', 'apilar', 'vasos', 'coches', 'ladrillos', 'dardos', 'flappy', 'bolos', 'golf'],
+  },
 ]
 
 export const GAME_IDS = GAMES.map(g => g.id)
@@ -42,10 +64,12 @@ export function shiftDay(day, delta) {
   return new Date(Date.parse(`${day}T00:00:00Z`) + delta * DAY_MS).toISOString().slice(0, 10)
 }
 
-/** The minigame everyone plays on `day`; one game per day, rotating through the list. */
+/** The minigame everyone plays on `day`; one game per day, following ROTATIONS. */
 export function gameOfDay(day) {
-  const n = GAMES.length
-  return GAMES[((dayIndex(day) % n) + n) % n]
+  const rotation = [...ROTATIONS].reverse().find(r => day >= r.from) ?? ROTATIONS[0]
+  const n = rotation.ids.length
+  const i = dayIndex(day) - dayIndex(rotation.from)
+  return gameById(rotation.ids[((i % n) + n) % n])
 }
 
 /** Monday of the week that contains `day` (seasons run Monday → Sunday). */

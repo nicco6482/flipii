@@ -129,8 +129,10 @@ export function startCover(canvas: HTMLCanvasElement, games: CoverGame[], today:
 
   /** Game icons on a tilted ring around the card; the back half is drawn behind it. */
   const orbit = (cx: number, cy: number, rx: number, ry: number, half: 'back' | 'front') => {
-    games.forEach((game, i) => {
-      const a = spin + (i / games.length) * Math.PI * 2
+    // At most ten icons so the ring never gets crowded.
+    const ring = games.slice(0, 10)
+    ring.forEach((game, i) => {
+      const a = spin + (i / ring.length) * Math.PI * 2
       const depth = Math.sin(a)
       if ((half === 'front') !== depth > 0) return
       const scale = 0.7 + 0.3 * (depth + 1) / 2
