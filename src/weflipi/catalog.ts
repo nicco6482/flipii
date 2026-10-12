@@ -2,6 +2,9 @@
 import type { GameId } from '../../server/weflipi-games.mjs'
 import type { Factory } from './engine'
 import { apilar } from './games/apilar'
+import { basket } from './games/basket'
+import { hockey } from './games/hockey'
+import { penaltis } from './games/penaltis'
 import { calculo } from './games/calculo'
 import { colores } from './games/colores'
 import { cortar } from './games/cortar'
@@ -50,4 +53,7 @@ export const CATALOG: Record<GameId, GameInfo> = {
   deslizar: { id: 'deslizar', name: 'Deslizar', emoji: '👆', color: '#a77bff', how: 'Flecha verde: hacia ella. Roja: al revés. Cada flecha te da menos tiempo.', unit: n => plural(n, 'acierto', 'aciertos'), factory: deslizar },
   vasos: { id: 'vasos', name: 'Vasos', emoji: '🥤', color: '#e0503a', how: 'Sigue la bola mientras se mezclan los vasos. Cada ronda, más rápido.', unit: n => plural(n, 'ronda', 'rondas'), factory: vasos },
   ladrillos: { id: 'ladrillos', name: 'Ladrillos', emoji: '🕹️', color: '#ff9f43', how: 'Rompe los ladrillos con la pala; la bola no para de acelerar. Si se escapa, fin.', unit: n => `${n} pts`, factory: ladrillos },
+  basket: { id: 'basket', name: 'Basket', emoji: '🏀', color: '#ff7a2e', how: 'Desliza hacia arriba para tirar. Limpia vale 3, con rebote 2, y 3 seguidas duplican. El aro acaba moviéndose.', unit: n => `${n} pts`, factory: basket },
+  penaltis: { id: 'penaltis', name: 'Penaltis', emoji: '🥅', color: '#2bd47d', how: '10 penaltis. Desliza para chutar; en curva hace efecto. Escuadra vale 2. El portero mejora cada tiro.', unit: n => `${n} pts`, factory: penaltis },
+  hockey: { id: 'hockey', name: 'Hockey', emoji: '🏒', color: '#5b8cff', how: 'Hockey de aire contra la máquina: arrastra tu mazo y marca. Ella va cada vez más rápido. 60 s.', unit: n => `${n} ${n === 1 ? 'gol' : 'goles'}`, factory: hockey },
 }

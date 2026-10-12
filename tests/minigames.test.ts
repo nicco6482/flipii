@@ -7,6 +7,9 @@ import { coches } from '../src/weflipi/games/coches'
 import { dardos, dartScore } from '../src/weflipi/games/dardos'
 import { flappy } from '../src/weflipi/games/flappy'
 import { golf } from '../src/weflipi/games/golf'
+import { basket } from '../src/weflipi/games/basket'
+import { hockey } from '../src/weflipi/games/hockey'
+import { penaltis } from '../src/weflipi/games/penaltis'
 import { calculo } from '../src/weflipi/games/calculo'
 import { colores } from '../src/weflipi/games/colores'
 import { cortar } from '../src/weflipi/games/cortar'
@@ -130,5 +133,25 @@ describe('minigames', () => {
 
   it('ladrillos ends when the ball gets past the paddle', async () => {
     expectValid('ladrillos', await play(ladrillos, (g, f) => f === 0 && tap(g, 40, 600)))
+  })
+
+  it('basket: a straight medium flick is a clean basket worth 3', async () => {
+    let first = -1
+    const game = basket({ rand: mulberry(1), score: n => first < 0 && (first = n), end: () => undefined, sfx })
+    tap(game)
+    for (let f = 0; f < 120; f += 1) game.update(1 / 60)
+    expect(first).toBe(3)
+  })
+
+  it('basket runs 60 s of shots', async () => {
+    expectValid('basket', await play(basket, (g, f) => f % 90 === 0 && tap(g)))
+  })
+
+  it('penaltis takes ten shots', async () => {
+    expectValid('penaltis', await play(penaltis, (g, f) => f % 120 === 0 && tap(g)))
+  })
+
+  it('hockey runs a 60 s match', async () => {
+    expectValid('hockey', await play(hockey, (g, f) => f % 30 === 0 && g.down?.(W / 2 + ((f / 30) % 2 ? 60 : -60), 500)))
   })
 })
