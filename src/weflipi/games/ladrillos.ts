@@ -30,6 +30,7 @@ export const ladrillos: Factory = env => {
   let level = 0
   let keyDir = 0
   let flash = 0
+  let paddleVX = 0
 
   const build = () => {
     level += 1
@@ -53,7 +54,9 @@ export const ladrillos: Factory = env => {
     bg: '#0e0c26',
     update(dt) {
       flash = Math.max(0, flash - dt * 3)
+      const previousPX = px
       px = Math.max(pw / 2, Math.min(W - pw / 2, px + keyDir * 520 * dt))
+      paddleVX = (px - previousPX) / Math.max(dt, 1 / 120)
       if (over) {
         overT += dt
         if (overT > 1) env.end(score)
@@ -90,10 +93,11 @@ export const ladrillos: Factory = env => {
         if (vy > 0 && by + R >= PADDLE_Y && by + R <= PADDLE_Y + 16 && Math.abs(bx - px) <= pw / 2 + R) {
           const k = Math.max(-1, Math.min(1, (bx - px) / (pw / 2)))
           const a = -Math.PI / 2 + k * 1.05
-          vx = Math.cos(a) * speed
+          vx = Math.max(-900, Math.min(900, Math.cos(a) * speed + paddleVX * 0.22))
           vy = Math.sin(a) * speed
           by = PADDLE_Y - R
           env.sfx.tone(330, 40, 'square', 0.04)
+          env.fx.vibrate(8)
         }
         for (const b of bricks) {
           if (b.hp <= 0) continue
@@ -108,6 +112,7 @@ export const ladrillos: Factory = env => {
             env.score(score)
           }
           env.sfx.tone(500 + (ROWS - b.row) * 60, 50, 'triangle', 0.05)
+          env.fx.vibrate(b.hp <= 0 ? 12 : 6)
           if (b.hp <= 0) env.fx.burst(b.x + BW / 2, b.y + BH / 2, ROW_COLORS[b.row], 10, 200)
           break
         }
