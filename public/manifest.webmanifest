@@ -1,20 +1,30 @@
 {
+  "id": "/",
   "name": "weflipi — minijuegos con amigos",
   "short_name": "weflipi",
   "description": "Un minijuego nuevo cada día para competir con tus amigos en grupos. Creado por nicco6482.",
-  "start_url": "./",
-  "scope": "./",
+  "lang": "es",
+  "dir": "ltr",
+  "start_url": "/?app=1",
+  "scope": "/",
   "display": "standalone",
-  "orientation": "any",
-  "background_color": "#1b1838",
+  "orientation": "portrait",
+  "background_color": "#14112e",
   "theme_color": "#1b1838",
+  "categories": ["games", "entertainment", "social"],
   "icons": [
-    {
-      "src": "./helix-drift-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/weflipi-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ],
-  "lang": "es"
+  "screenshots": [
+    { "src": "/screenshots/hoy.webp", "sizes": "780x1688", "type": "image/webp", "form_factor": "narrow", "label": "El reto del día" },
+    { "src": "/screenshots/grupos.webp", "sizes": "780x1688", "type": "image/webp", "form_factor": "narrow", "label": "Tu grupo y el podio" },
+    { "src": "/screenshots/juegos.webp", "sizes": "780x1688", "type": "image/webp", "form_factor": "narrow", "label": "17 minijuegos" }
+  ],
+  "shortcuts": [
+    { "name": "Jugar el reto de hoy", "short_name": "Jugar", "url": "/?app=1#hoy", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Mis grupos", "short_name": "Grupos", "url": "/?app=1#grupos", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
 }

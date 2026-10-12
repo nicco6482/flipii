@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#1b1838" />
+    <meta name="theme-color" content="#14112e" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -12,14 +12,23 @@
     <meta name="description" content="Un minijuego nuevo cada día. Crea un grupo con tus amigos y competid por la temporada semanal. Creado por nicco6482." />
     <meta name="author" content="nicco6482" />
     <meta property="og:title" content="weflipi" />
+    <meta property="og:image" content="/icons/icon-512.png" />
     <meta property="og:description" content="Un minijuego nuevo cada día. Crea un grupo con tus amigos y competid por la temporada semanal." />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1 21 12 12 23 3 12Z' fill='%23ffd35c' stroke='%231b1838' stroke-width='2'/%3E%3C/svg%3E" />
-    <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="./helix-drift-icon.svg" />
+    <link rel="icon" href="/weflipi-icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <link rel="preload" href="./fonts/Sora-VF.subset.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="./fonts/Figtree-VF.subset.woff2" as="font" type="font/woff2" crossorigin />
   </head>
   <body>
+    <!-- Shown instantly while the app loads (and as the launch screen of the installed app). -->
+    <div id="splash" style="position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:radial-gradient(120% 70% at 50% 35%,#3a2f86,#14112e 70%);transition:opacity .35s ease">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px">
+        <img src="/icons/icon-192.png" width="112" height="112" alt="" style="border-radius:28px;box-shadow:0 10px 30px rgba(0,0,0,.45)" />
+        <div style="font:italic 800 46px/1 Sora,system-ui,sans-serif;color:#fff7e8;letter-spacing:-.02em;text-shadow:0 3px 0 #1b1838">we<span style="color:#ffd35c">flipi</span></div>
+      </div>
+    </div>
     <div id="app"></div>
     <script type="module" src="/src/weflipi/main.ts"></script>
   </body>

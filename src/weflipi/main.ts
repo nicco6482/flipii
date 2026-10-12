@@ -6,6 +6,7 @@ import * as api from './api'
 import { CATALOG } from './catalog'
 import { startCover } from './cover'
 import { mulberry, muted, run, setMuted, sfx } from './engine'
+import { canPrompt, isInstalled, onInstallChange, platform, promptInstall, registerServiceWorker, stepsHtml } from './install'
 
 const AUTHOR = 'nicco6482'
 const TABS = [
@@ -25,6 +26,13 @@ document.body.prepend(coverCanvas)
 const coverGames = Object.values(CATALOG)
 const cover = startCover(coverCanvas, coverGames, Math.max(0, coverGames.findIndex(x => x.id === gameOfDay(today()).id)), () => app.querySelector('.hero-space')?.getBoundingClientRect() ?? null)
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`)
+
+function hideSplash(): void {
+  const el = document.getElementById('splash')
+  if (!el) return
+  el.style.opacity = '0'
+  setTimeout(() => el.remove(), 400)
+}
 
 type View = {
   tab: Tab
@@ -141,6 +149,7 @@ function modal(title: string, body: string, onSubmit: (form: FormData) => Promis
 
 function renderWelcome(): void {
   welcome = true
+  hideSplash()
   let avatar = AVATARS[Math.floor(Math.random() * 8)]
   app.innerHTML = `
   <main class="page welcome">
@@ -201,6 +210,7 @@ function notice(): string {
 
 function render(): void {
   if (welcome || stopGame) return
+  hideSplash()
   const m = me()
   const streak = view.state?.stats?.streak ?? 0
   const screens: Record<Tab, () => string> = { hoy: screenHoy, grupos: screenGrupos, juegos: screenJuegos, ranking: screenRanking, perfil: screenPerfil }
@@ -247,6 +257,7 @@ function screenHoy(): string {
     </div>
     <div class="hero-space" aria-hidden="true"></div>
     ${notice()}
+    ${installBanner()}
     <section class="card today" style="--accent:${g.color}">
       <div class="today-top"><span class="eyebrow">⚔️ Reto de hoy</span><span class="countdown" data-el="timer">${clockHtml(deadline - Date.now())}</span></div>
       <div class="today-game"><span class="big-emoji">${g.emoji}</span><div><h2>${esc(g.name)}</h2><p>${esc(g.how)}</p></div></div>
@@ -297,6 +308,58 @@ function podium<T extends api.Look & { id: string; place: number }>(rows: T[], l
       </div>`
     })
     .join('')}</div>`
+}
+
+// ─── Install ────────────────────────────────────────────────────────────
+
+const DOWNLOAD_URL = () => `${location.origin}/descargar`
+
+function installBanner(): string {
+  if (isInstalled() || store.get('weflipi.installHidden') === '1') return ''
+  return `
+    <section class="card install-banner">
+      <img src="/icons/icon-192.png" alt="" width="52" height="52" />
+      <div><b>Instala weflipi</b><small>Tenla en tu pantalla de inicio como una app. Gratis.</small></div>
+      <button class="btn primary small" data-action="install">${canPrompt() ? 'Instalar' : 'Cómo'}</button>
+      <button class="x" data-action="install-hide" aria-label="Ocultar">✕</button>
+    </section>`
+}
+
+async function install(): Promise<void> {
+  if (canPrompt()) {
+    if (await promptInstall()) toast('¡weflipi instalada! Búscala en tu pantalla de inicio')
+    return
+  }
+  const wrap = document.createElement('div')
+  wrap.className = 'sheet-wrap'
+  const p = platform()
+  wrap.innerHTML = `<div class="sheet"><span class="grab"></span>
+    <div class="install-head"><img src="/icons/icon-192.png" alt="" width="64" height="64" /><div><h2>Instala weflipi</h2><p class="muted">${p === 'ios' ? 'En iPhone se instala desde Safari en 3 pasos:' : p === 'android' ? 'En Android se instala desde Chrome:' : 'Así se instala:'}</p></div></div>
+    ${stepsHtml()}
+    <button class="btn primary" data-close>Entendido</button></div>`
+  document.body.appendChild(wrap)
+  const close = () => wrap.remove()
+  wrap.addEventListener('pointerdown', e => e.target === wrap && close())
+  wrap.querySelector('[data-close]')!.addEventListener('click', close)
+}
+
+async function shareApp(): Promise<void> {
+  const url = DOWNLOAD_URL()
+  const msg = '¡Descárgate weflipi! Un minijuego nuevo cada día para picarnos entre amigos 🎮'
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'weflipi', text: msg, url })
+      return
+    } catch {
+      /* cancelled: copy instead */
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(`${msg} ${url}`)
+    toast('Enlace de descarga copiado')
+  } catch {
+    toast(url)
+  }
 }
 
 // ─── Grupos ─────────────────────────────────────────────────────────────
@@ -450,6 +513,8 @@ function screenPerfil(): string {
       <div class="color-row">${COLORS.map(c => `<button class="swatch ${c === m.color ? 'is-on' : ''}" style="--c:${c}" data-action="color" data-v="${c}" aria-label="Color ${c}"></button>`).join('')}</div>
     </section>
     <section class="card settings">
+      ${isInstalled() ? '' : '<button class="setting" data-action="install"><span>📲 Instalar la app</span><b>Gratis →</b></button>'}
+      <button class="setting" data-action="share-app"><span>🔗 Enlace de descarga</span><b>Compartir →</b></button>
       <button class="setting" data-action="sound"><span>Sonido</span><b>${muted() ? 'Desactivado 🔇' : 'Activado 🔊'}</b></button>
     </section>
     <footer>weflipi · Creado por ${esc(AUTHOR)}</footer>`
@@ -743,6 +808,11 @@ app.addEventListener('click', async e => {
   const action = el.dataset.action
   buzz(8)
   if (action === 'tab') go(el.dataset.tab as Tab)
+  else if (action === 'install') void install()
+  else if (action === 'install-hide') {
+    store.set('weflipi.installHidden', '1')
+    render()
+  } else if (action === 'share-app') void shareApp()
   else if (action === 'intro') intro(el.dataset.game as GameId)
   else if (action === 'group') {
     view.groupTab = 'hoy'
@@ -860,6 +930,9 @@ setInterval(() => {
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && !stopGame && !document.querySelector('.intro, .sheet-wrap')) void refresh()
 })
+
+registerServiceWorker()
+onInstallChange(() => render())
 
 void refresh()
 ;(window as unknown as { __weflipi: unknown }).__weflipi = { view, play, intro }
