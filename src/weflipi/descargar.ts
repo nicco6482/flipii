@@ -33,7 +33,7 @@ function render(): void {
     : p === 'android'
       ? `<a class="btn primary big pulse" href="${APK_URL}" download="weflipi.apk" data-apk>📲 Descargar gratis</a><small class="apk-note">App para Android · archivo APK · gratis</small>`
       : p === 'ios'
-        ? `<a class="btn primary big pulse" href="#guia">📲 Añadir a mi iPhone</a><small class="apk-note">Gratis · 3 toques · sin App Store</small>`
+        ? `<a class="btn primary big pulse" href="#guia">📲 Añadir a mi iPhone</a><small class="apk-note">Gratis · 4 toques · sin App Store</small>`
         : `<button class="btn primary big pulse" data-install>📲 Descargar gratis</button>`
   const steps = showSteps === 'apk' ? apkStepsHtml() : stepsHtml()
   app.innerHTML = `
@@ -56,7 +56,7 @@ function render(): void {
     </section>
     ${
       p === 'ios' && !installed
-        ? `<section class="card ios-card" id="guia"><div class="ig-title"><img src="/icons/apple-touch-icon.png" alt="" width="84" height="84" /><h2>weflipi en tu iPhone</h2><p class="muted">Apple no deja descargar apps fuera de la App Store, pero puedes tener weflipi en tu pantalla de inicio en 3 toques. Se abre a pantalla completa, directo al juego.</p></div>${iosGuideHtml()}</section>`
+        ? `<section class="card ios-card" id="guia"><div class="ig-title"><img src="/icons/apple-touch-icon.png" alt="" width="84" height="84" /><h2>weflipi en tu iPhone</h2><p class="muted">Apple no deja descargar apps fuera de la App Store, pero puedes tener weflipi en tu pantalla de inicio en 4 toques. Se abre a pantalla completa, directo al juego.</p></div>${iosGuideHtml()}</section>`
         : ''
     }
     ${
@@ -72,7 +72,7 @@ function render(): void {
     <div class="shots">${['hoy', 'grupos', 'juegos'].map(s => `<img src="/screenshots/${s}.webp" alt="" loading="lazy" />`).join('')}</div>
     <footer>Creado por nicco6482</footer>
   </main>
-  ${p === 'ios' && !installed ? '<div class="safari-pointer" aria-hidden="true"><span>Compartir</span><b>⬇</b></div>' : ''}`
+  ${p === 'ios' && !installed ? '<div class="safari-pointer" aria-hidden="true"><span>Toca ⋯</span><b>⬇</b></div>' : ''}`
 }
 
 app.addEventListener('click', async e => {

@@ -359,3 +359,25 @@ button.link { font: inherit; font-weight: 800; font-size: 14px; }
 .safari-pointer span { background: var(--gold); color: var(--ink); font: 900 14px/1 var(--display); padding: 8px 14px; border-radius: 999px; border: 3px solid var(--ink); box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35); }
 .safari-pointer b { font-size: 44px; line-height: 1; filter: drop-shadow(0 3px 0 var(--ink)); }
 @keyframes point { 50% { transform: translate(-50%, 10px); } }
+/* iOS 26 Safari mock-ups (Liquid Glass bottom bar, share-sheet dialog). */
+.ig-glass { display: flex; align-items: center; gap: 8px; padding: 12px 10px; background: linear-gradient(160deg, #cfd8ff, #f6d7ff); }
+.ig-round { flex: none; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, 0.75); box-shadow: inset 0 1px 0 #fff, 0 2px 8px rgba(0, 0, 0, 0.12); color: #1c1c1e; }
+.ig-round b { font-size: 26px; line-height: 0.5; letter-spacing: 1px; }
+.ig-round.is-on { width: 58px; height: 58px; background: #fff; box-shadow: 0 0 0 4px var(--gold), 0 0 24px 6px rgba(255, 211, 92, 0.75); animation: tap 1.4s ease-in-out infinite; }
+.ig-url { flex: 1; min-width: 0; height: 46px; border-radius: 999px; background: rgba(255, 255, 255, 0.75); box-shadow: inset 0 1px 0 #fff, 0 2px 8px rgba(0, 0, 0, 0.12); display: grid; place-items: center; font-size: 14px; font-weight: 600; color: #1c1c1e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 10px; }
+.ig-dialog { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.ig-dialog-top { display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
+.ig-dialog-top span { color: #007aff; font-weight: 600; }
+.ig-add.is-on { background: #fff; padding: 6px 12px; border-radius: 999px; box-shadow: 0 0 0 4px var(--gold), 0 0 20px 6px rgba(255, 211, 92, 0.7); animation: tap 1.4s ease-in-out infinite; }
+.ig-dialog-app { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 14px; padding: 10px; }
+.ig-dialog-app img { width: 52px; height: 52px; border-radius: 12px; }
+.ig-dialog-app div { display: flex; flex-direction: column; }
+.ig-dialog-app small { color: #8e8e93; }
+.ig-dialog-toggle { display: flex; justify-content: space-between; align-items: center; background: #fff; border-radius: 14px; padding: 12px; font-weight: 600; }
+.ig-switch { width: 50px; height: 30px; border-radius: 999px; background: #34c759; position: relative; flex: none; }
+.ig-switch::after { content: ''; position: absolute; top: 2px; right: 2px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+.ig-old { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.ig-old .ico { display: inline-grid; vertical-align: middle; color: #3d8bff; background: #fff; border-radius: 6px; padding: 1px; }
+/* On iOS 26 the ⋯ button sits at the bottom right of Safari. */
+.safari-pointer { left: auto; right: calc(10px + env(safe-area-inset-right)); transform: none; }
+@keyframes point { 50% { transform: translateY(10px); } }
