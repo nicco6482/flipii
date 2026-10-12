@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { handle, memoryStore, redisStore, upstashCredentials, type Store } from '../server/weflipi-api.mjs'
 import { GAMES, gameOfDay, msUntilNextDay, rankDay, seasonDays, seasonTable, today, weekStart } from '../server/weflipi-games.mjs'
 
@@ -46,6 +46,11 @@ const redisTestUrl = (globalThis as { process?: { env: Record<string, string | u
 if (redisTestUrl) stores.push(['redis', () => redisStore(redisTestUrl)])
 
 describe.each(stores)('weflipi api (%s)', (_name, makeStore) => {
+  // Every test starts from an empty database (a no-op for the fresh in-memory store).
+  beforeEach(async () => {
+    if (_name === 'redis') await makeStore().exec([['FLUSHDB']])
+  })
+
   const call = (store: Store, method: string, a: string, body: object = {}, token?: string, query: Record<string, string> = {}) =>
     handle(store, { method, query: { a, ...query }, body, auth: token ? `Bearer ${token}` : undefined, ip: '1.2.3.4' }, NOON)
 
@@ -96,6 +101,31 @@ describe.each(stores)('weflipi api (%s)', (_name, makeStore) => {
 
     const s = await call(store, 'GET', 'state', {}, ana)
     expect(s.body).toMatchObject({ game: game.id, best: good, plays: 3, me: { name: 'Ana' }, groups: [{ code, name: 'Los cracks', members: 2 }] })
+  })
+
+  it('saves avatars, counts day streaks and ranks everyone worldwide', async () => {
+    const store = makeStore()
+    const ana = await player(store, 'Ana')
+    const leo = await player(store, 'Leo')
+    expect((await call(store, 'POST', 'profile', { avatar: '🦊', color: '#a77bff' }, ana)).body).toEqual({ name: 'Ana', avatar: '🦊', color: '#a77bff' })
+    expect((await call(store, 'POST', 'profile', { avatar: 'X' }, ana)).body.error).toBe('bad_avatar')
+    const game = gameOfDay(today(NOON))
+    const hi = game.dir === 'asc' ? game.min + 1 : game.min + 30
+    const lo = game.dir === 'asc' ? game.min + 9 : game.min + 3
+    // Played yesterday too: the streak continues.
+    const yesterday = NOON - 86_400_000
+    const yGame = gameOfDay(today(yesterday))
+    await handle(store, { method: 'POST', query: { a: 'score' }, body: { game: yGame.id, score: yGame.min }, auth: `Bearer ${ana}` }, yesterday)
+    expect((await call(store, 'POST', 'score', { game: game.id, score: hi }, ana)).body.streak).toBe(2)
+    expect((await call(store, 'POST', 'score', { game: game.id, score: lo }, leo)).body.streak).toBe(1)
+    const st = await call(store, 'GET', 'state', {}, ana)
+    expect(st.body.me).toMatchObject({ name: 'Ana', avatar: '🦊' })
+    expect(st.body.stats).toMatchObject({ streak: 2, bestStreak: 2, total: 2, playedToday: true })
+    const g = await call(store, 'GET', 'global', {}, leo)
+    expect(g.body.total).toBe(2)
+    expect(g.body.ranking.map((r: { name: string }) => r.name)).toEqual(['Ana', 'Leo'])
+    expect(g.body.ranking[0]).toMatchObject({ place: 1, avatar: '🦊', score: hi })
+    expect(g.body.me).toEqual({ place: 2, score: lo })
   })
 
   it('rejects other days games, impossible scores, strangers and bad tokens', async () => {

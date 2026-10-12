@@ -112,3 +112,14 @@ export function seasonTable(days) {
   }
   return [...table.values()].sort((a, b) => b.points - a.points || b.wins - a.wins)
 }
+
+/** Avatar faces and background colours a player can pick on their profile. */
+export const AVATARS = ['😎', '🤠', '🥷', '🧙', '👽', '🤖', '👻', '🐸', '🦊', '🐼', '🐯', '🦁', '🐵', '🐙', '🦄', '🐲', '🐧', '🦖', '🍕', '🌮', '🔥', '⚡', '🌈', '💀']
+export const COLORS = ['#ffd35c', '#ff9f43', '#ff5f7e', '#a77bff', '#7ef9ff', '#2bd47d', '#5b8cff', '#f5f5f5']
+
+/** Stable default look for players who never picked one. */
+export function defaultLook(id) {
+  let h = 0
+  for (const ch of String(id)) h = (Math.imul(h, 31) + ch.charCodeAt(0)) >>> 0
+  return { avatar: AVATARS[h % AVATARS.length], color: COLORS[(h >>> 8) % COLORS.length] }
+}
