@@ -5,7 +5,7 @@ import qrcode from 'qrcode-generator'
 import { gameOfDay, today } from '../../server/weflipi-games.mjs'
 import { CATALOG } from './catalog'
 import { startCover } from './cover'
-import { canPrompt, isInstalled, onInstallChange, platform, promptInstall, registerServiceWorker, stepsHtml } from './install'
+import { APK_URL, apkStepsHtml, canPrompt, isInstalled, onInstallChange, platform, promptInstall, registerServiceWorker, stepsHtml } from './install'
 
 const app = document.getElementById('app')!
 const canvas = document.createElement('canvas')
@@ -15,7 +15,7 @@ document.body.prepend(canvas)
 const games = Object.values(CATALOG)
 startCover(canvas, games, Math.max(0, games.findIndex(g => g.id === gameOfDay(today()).id)), () => app.querySelector('.hero-space')?.getBoundingClientRect() ?? null)
 
-let showSteps = false
+let showSteps: '' | 'apk' | 'web' = ''
 
 function qrSvg(text: string): string {
   const qr = qrcode(0, 'M')
@@ -27,9 +27,13 @@ function qrSvg(text: string): string {
 function render(): void {
   const p = platform()
   const installed = isInstalled()
+  // Android gets the real app (APK); iPhone and computers get the installable web app.
   const action = installed
     ? `<a class="btn primary big" href="/">▶ Abrir weflipi</a>`
-    : `<button class="btn primary big pulse" data-install>📲 Descargar gratis</button>`
+    : p === 'android'
+      ? `<a class="btn primary big pulse" href="${APK_URL}" download="weflipi.apk" data-apk>📲 Descargar gratis</a><small class="apk-note">App para Android · archivo APK · gratis</small>`
+      : `<button class="btn primary big pulse" data-install>📲 ${p === 'ios' ? 'Instalar gratis' : 'Descargar gratis'}</button>`
+  const steps = showSteps === 'apk' ? apkStepsHtml() : stepsHtml()
   app.innerHTML = `
   <main class="page welcome download">
     <div class="hero">
@@ -43,7 +47,9 @@ function render(): void {
         <div><h2>weflipi</h2><small>Juegos · Gratis</small><span class="by">Creado por nicco6482</span></div>
       </div>
       ${action}
-      ${showSteps && !installed ? `<div class="steps-box">${stepsHtml()}</div>` : ''}
+      ${showSteps && !installed ? `<div class="steps-box">${steps}</div>` : ''}
+      ${!installed && p === 'android' ? `<button class="link center" data-install>¿Sin descargar archivos? Instálala desde Chrome</button>` : ''}
+      ${!installed && p === 'desktop' ? `<a class="link center" href="${APK_URL}" download="weflipi.apk">Descargar el APK para Android</a>` : ''}
       ${installed ? '' : `<a class="link center" href="/">o juega ahora en el navegador →</a>`}
     </section>
     ${
@@ -62,12 +68,22 @@ function render(): void {
 }
 
 app.addEventListener('click', async e => {
-  if (!(e.target as HTMLElement).closest('[data-install]')) return
+  const target = e.target as HTMLElement
+  if (target.closest('[data-apk]')) {
+    // Let the download start, then explain how to open it.
+    setTimeout(() => {
+      showSteps = 'apk'
+      render()
+      app.querySelector('.steps-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 300)
+    return
+  }
+  if (!target.closest('[data-install]')) return
   if (canPrompt()) {
     if (await promptInstall()) render()
     return
   }
-  showSteps = true
+  showSteps = 'web'
   render()
   app.querySelector('.steps-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 })

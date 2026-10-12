@@ -317,3 +317,6 @@ input:focus { border-color: var(--gold); }
 .features b { color: var(--cream); }
 .shots { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 2px 10px; scrollbar-width: none; }
 .shots img { width: 46%; min-width: 160px; aspect-ratio: 780 / 1688; object-fit: cover; border-radius: 22px; border: 3px solid var(--ink); box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35); scroll-snap-align: center; }
+
+.apk-note { text-align: center; color: var(--muted); font-weight: 700; font-size: 12px; margin-top: -6px; }
+button.link { font: inherit; font-weight: 800; font-size: 14px; }

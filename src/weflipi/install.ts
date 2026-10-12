@@ -1,6 +1,9 @@
 // "Install weflipi" support shared by the hub and the /descargar page: registers the service
 // worker, catches Chrome's install prompt, detects the platform and explains the iPhone steps.
 
+/** Built by .github/workflows/android.yml; the URL never changes between builds. */
+export const APK_URL = 'https://github.com/nicco6482/flipii/releases/download/android/weflipi.apk'
+
 type InstallPrompt = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }> }
 
 let deferred: InstallPrompt | null = null
@@ -38,9 +41,37 @@ export function platform(): Platform {
 /** iOS only lets Safari add web apps to the home screen. */
 export const isIosNotSafari = () => platform() === 'ios' && /CriOS|FxiOS|EdgiOS|GSA|Instagram|FBAN|FBAV|WhatsApp/.test(navigator.userAgent)
 
+/** Running inside the weflipi Android app (its WebView adds this to the user agent). */
+export const isAndroidApp = () => /weflipi-android/.test(navigator.userAgent)
+
 export function isInstalled(): boolean {
-  return matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
+  return isAndroidApp() || matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
 }
+
+/** Opens Android's share sheet inside the app; returns false elsewhere. */
+export function nativeShare(text: string): boolean {
+  const bridge = (window as unknown as { WeflipiAndroid?: { share: (t: string) => void } }).WeflipiAndroid
+  if (!bridge) return false
+  bridge.share(text)
+  return true
+}
+
+/** Starts the APK download (Android). */
+export function downloadApk(): void {
+  const a = document.createElement('a')
+  a.href = APK_URL
+  a.download = 'weflipi.apk'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+}
+
+/** What to do once weflipi.apk is downloading. */
+export const apkStepsHtml = () => `<ol class="steps">
+      <li><b>1</b><span>Espera a que se descargue <b>weflipi.apk</b> y ábrelo (desde la notificación o desde <b>Descargas</b>).</span></li>
+      <li><b>2</b><span>Si Android te avisa, pulsa <b>Ajustes</b> y activa <b>Permitir de esta fuente</b>. Vuelve atrás.</span></li>
+      <li><b>3</b><span>Pulsa <b>Instalar</b> (si sale Play Protect: <b>Más detalles → Instalar de todas formas</b>) y luego <b>Abrir</b>. ¡Listo!</span></li>
+    </ol>`
 
 export const canPrompt = () => deferred !== null
 

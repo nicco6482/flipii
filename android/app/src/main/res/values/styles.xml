@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="weflipi_bg">#14112E</color>
+    <color name="weflipi_icon_bg">#2A2160</color>
+    <style name="Theme.Weflipi" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/weflipi_bg</item>
+        <item name="android:statusBarColor">@color/weflipi_bg</item>
+        <item name="android:navigationBarColor">@color/weflipi_bg</item>
+        <item name="android:colorAccent">#FFD35C</item>
+    </style>
+</resources>
