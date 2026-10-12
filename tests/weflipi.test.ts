@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { handle, memoryStore, upstashCredentials } from '../server/weflipi-api.mjs'
+import { handle, memoryStore, redisStore, upstashCredentials, type Store } from '../server/weflipi-api.mjs'
 import { GAMES, gameOfDay, msUntilNextDay, rankDay, seasonDays, seasonTable, today, weekStart } from '../server/weflipi-games.mjs'
 
 const NOON = Date.parse('2026-10-14T10:00:00Z') // Wednesday, 12:00 in Madrid
@@ -40,11 +40,16 @@ describe('weflipi rules', () => {
   })
 })
 
-describe('weflipi api', () => {
-  const call = (store: ReturnType<typeof memoryStore>, method: string, a: string, body: object = {}, token?: string, query: Record<string, string> = {}) =>
+const stores: [string, () => Store][] = [['memory', memoryStore]]
+// Set REDIS_TEST_URL (e.g. redis://127.0.0.1:6379) to also run these against a real Redis server.
+const redisTestUrl = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.REDIS_TEST_URL
+if (redisTestUrl) stores.push(['redis', () => redisStore(redisTestUrl)])
+
+describe.each(stores)('weflipi api (%s)', (_name, makeStore) => {
+  const call = (store: Store, method: string, a: string, body: object = {}, token?: string, query: Record<string, string> = {}) =>
     handle(store, { method, query: { a, ...query }, body, auth: token ? `Bearer ${token}` : undefined, ip: '1.2.3.4' }, NOON)
 
-  async function player(store: ReturnType<typeof memoryStore>, name: string) {
+  async function player(store: Store, name: string) {
     const r = await call(store, 'POST', 'register', { name })
     expect(r.status).toBe(200)
     return `${r.body.id}.${r.body.token}`
@@ -66,7 +71,7 @@ describe('weflipi api', () => {
   })
 
   it('creates a group, lets a friend join and ranks today and the season', async () => {
-    const store = memoryStore()
+    const store = makeStore()
     const ana = await player(store, '  Ana  ')
     const leo = await player(store, 'Leo')
     const created = await call(store, 'POST', 'createGroup', { name: 'Los cracks' }, ana)
@@ -94,7 +99,7 @@ describe('weflipi api', () => {
   })
 
   it('rejects other days games, impossible scores, strangers and bad tokens', async () => {
-    const store = memoryStore()
+    const store = makeStore()
     const ana = await player(store, 'Ana')
     const eve = await player(store, 'Eve')
     const game = gameOfDay(today(NOON))
