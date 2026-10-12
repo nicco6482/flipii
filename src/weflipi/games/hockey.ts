@@ -61,6 +61,7 @@ export const hockey: Factory = env => {
         puck.vy *= MAX_PUCK / sp
       }
       env.sfx.tone(300 + Math.min(600, sp / 3), 35, 'square', 0.05)
+      env.fx.vibrate(sp > 900 ? 24 : 8)
       if (sp > 900) shake = 0.4
     }
   }
@@ -117,11 +118,13 @@ export const hockey: Factory = env => {
           puck.x = RINK.x + PUCK_R
           puck.vx = Math.abs(puck.vx) * 0.9
           env.sfx.tone(180, 25, 'square', 0.03)
+          if (Math.abs(puck.vx) > 500) env.fx.vibrate(6)
         }
         if (puck.x > RINK.x + RINK.w - PUCK_R) {
           puck.x = RINK.x + RINK.w - PUCK_R
           puck.vx = -Math.abs(puck.vx) * 0.9
           env.sfx.tone(180, 25, 'square', 0.03)
+          if (Math.abs(puck.vx) > 500) env.fx.vibrate(6)
         }
         const inMouth = puck.x > goalLeft + 4 && puck.x < goalRight - 4
         if (puck.y < RINK.y + PUCK_R) {
@@ -210,6 +213,22 @@ export const hockey: Factory = env => {
       g.fillStyle = '#1b1838'
       g.fillRect(goalLeft, RINK.y - 8, GOAL_W, 12)
       g.fillRect(goalLeft, RINK.y + RINK.h - 4, GOAL_W, 12)
+      if (started && pause <= 0) {
+        g.save()
+        g.globalAlpha = 0.3
+        g.strokeStyle = '#2bd47d'
+        g.lineWidth = 2
+        g.setLineDash([6, 8])
+        g.beginPath()
+        g.moveTo(me.x, me.y)
+        g.lineTo(target.x, target.y)
+        g.stroke()
+        g.setLineDash([])
+        g.beginPath()
+        g.arc(target.x, target.y, MALLET_R * 0.75, 0, Math.PI * 2)
+        g.stroke()
+        g.restore()
+      }
       // Puck trail and puck.
       trail.forEach((p, i) => {
         g.fillStyle = `rgba(27,24,56,${(i / trail.length) * 0.18})`
