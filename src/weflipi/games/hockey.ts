@@ -236,9 +236,24 @@ export const hockey: Factory = env => {
         g.arc(p.x, p.y, PUCK_R * (i / trail.length), 0, Math.PI * 2)
         g.fill()
       })
-      g.fillStyle = '#1b1838'
+      g.fillStyle = 'rgba(0,0,0,0.28)'
+      g.beginPath()
+      g.ellipse(puck.x + 4, puck.y + 7, PUCK_R * 1.1, PUCK_R * 0.55, 0, 0, Math.PI * 2)
+      g.fill()
+      const puckGrd = g.createRadialGradient(puck.x - 7, puck.y - 8, 2, puck.x, puck.y, PUCK_R * 1.2)
+      puckGrd.addColorStop(0, '#8b93b6')
+      puckGrd.addColorStop(0.25, '#3d466d')
+      puckGrd.addColorStop(1, '#10152d')
+      g.fillStyle = puckGrd
       g.beginPath()
       g.arc(puck.x, puck.y, PUCK_R, 0, Math.PI * 2)
+      g.fill()
+      g.strokeStyle = '#0d1026'
+      g.lineWidth = 3
+      g.stroke()
+      g.fillStyle = 'rgba(255,255,255,0.45)'
+      g.beginPath()
+      g.ellipse(puck.x - 6, puck.y - 7, 5, 3, -0.3, 0, Math.PI * 2)
       g.fill()
       g.strokeStyle = '#ffd35c'
       g.lineWidth = 3
@@ -250,7 +265,11 @@ export const hockey: Factory = env => {
         g.beginPath()
         g.arc(m.x + 4, m.y + 6, MALLET_R, 0, Math.PI * 2)
         g.fill()
-        g.fillStyle = color
+        const mat = g.createRadialGradient(m.x - 10, m.y - 12, 2, m.x, m.y, MALLET_R * 1.15)
+        mat.addColorStop(0, '#ffffff')
+        mat.addColorStop(0.18, color)
+        mat.addColorStop(1, '#1b1838')
+        g.fillStyle = mat
         g.strokeStyle = '#1b1838'
         g.lineWidth = 4
         g.beginPath()
