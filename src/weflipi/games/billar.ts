@@ -14,7 +14,7 @@ const MAX_SPEED = 1500
 const FRICTION = 190 // px/s² rolling deceleration
 const COLORS = ['#ffd35c', '#3d7bff', '#ff2d55', '#a77bff', '#ff9f43', '#2bd47d', '#8b2c2c', '#1b1838', '#ffd35c', '#3d7bff']
 
-type Ball = { x: number; y: number; vx: number; vy: number; n: number; in: boolean; sink: number }
+type Ball = { x: number; y: number; vx: number; vy: number; n: number; in: boolean; sink: number; english: number }
 
 const POCKETS: [number, number][] = [
   [T.x, T.y],
@@ -31,7 +31,7 @@ export const billar: Factory = env => {
   let score = 0
   let racks = 0
   let balls: Ball[] = []
-  let cue: Ball = { x: W / 2, y: T.y + T.h * 0.78, vx: 0, vy: 0, n: 0, in: false, sink: 0 }
+  let cue: Ball = { x: W / 2, y: T.y + T.h * 0.78, vx: 0, vy: 0, n: 0, in: false, sink: 0, english: 0 }
   let aiming = false
   let ax = 0
   let ay = 0
@@ -48,7 +48,7 @@ export const billar: Factory = env => {
     const top = T.y + T.h * 0.24
     let n = 1
     for (let row = 0; row < 4; row += 1)
-      for (let i = 0; i <= row; i += 1) balls.push({ x: W / 2 + (i - row / 2) * (R * 2 + 1), y: top - row * (R * 1.75 + 1), vx: 0, vy: 0, n: n++, in: false, sink: 0 })
+      for (let i = 0; i <= row; i += 1) balls.push({ x: W / 2 + (i - row / 2) * (R * 2 + 1), y: top - row * (R * 1.75 + 1), vx: 0, vy: 0, n: n++, in: false, sink: 0, english: 0 })
     // A little random jitter so no two breaks are identical.
     for (const b of balls) {
       b.x += (env.rand() - 0.5) * 0.6
@@ -172,6 +172,11 @@ export const billar: Factory = env => {
           }
           b.x += b.vx * h
           b.y += b.vy * h
+          if (b === cue && Math.abs(b.english) > 0.01) {
+            // Side spin bends the cue ball during the first part of its travel, then fades.
+            b.vx += b.english * 210 * h
+            b.english *= Math.exp(-3.2 * h)
+          }
           const sp = Math.hypot(b.vx, b.vy)
           if (sp > 0) {
             const ns = Math.max(0, sp - FRICTION * h)
@@ -193,7 +198,7 @@ export const billar: Factory = env => {
           msgT = 1.3
         }
         shotPotted = 0
-        if (cue.in) cue = { x: W / 2, y: T.y + T.h * 0.78, vx: 0, vy: 0, n: 0, in: false, sink: 0 }
+        if (cue.in) cue = { x: W / 2, y: T.y + T.h * 0.78, vx: 0, vy: 0, n: 0, in: false, sink: 0, english: 0 }
         if (balls.every(b => b.in)) {
           score += 3
           env.score(score)
@@ -230,12 +235,13 @@ export const billar: Factory = env => {
         dx = 0
         dy = -1
         len = 1
-        ax = 0
-        ay = 0
-        x = 0
-        y = MAX_PULL * 0.75
+        ax = cue.x
+        ay = cue.y
+        x = cue.x
+        y = cue.y + MAX_PULL * 0.75
       }
       const power = Math.min(Math.hypot(ax - x, ay - y), MAX_PULL) / MAX_PULL
+      cue.english = Math.max(-1, Math.min(1, (ax - cue.x) / (R * 1.6)))
       cue.vx = (dx / len) * power * MAX_SPEED
       cue.vy = (dy / len) * power * MAX_SPEED
       shooting = true
@@ -337,6 +343,7 @@ export const billar: Factory = env => {
           g.fillStyle = `hsl(${120 - power * 120}, 90%, 55%)`
           rrect(g, T.x + 10, T.y + T.h + 34, (T.w - 20) * power, 12, 6)
           g.fill()
+          if (Math.abs(cue.english) > 0.08) text(g, cue.english < 0 ? '← Efecto' : 'Efecto →', W / 2, T.y + T.h + 58, 15, '#7ef9ff', 'center', 800)
         }
       }
       // Balls.
