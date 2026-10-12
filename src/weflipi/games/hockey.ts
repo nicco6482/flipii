@@ -131,6 +131,8 @@ export const hockey: Factory = env => {
             flash = '¡GOL!'
             flashT = 1
             env.sfx.tone(880, 200, 'triangle', 0.09)
+            env.fx.burst(W / 2, RINK.y + 10, undefined, 45, 420)
+            env.fx.vibrate(80)
             resetPuck(false)
             break
           }
@@ -143,6 +145,7 @@ export const hockey: Factory = env => {
             flash = 'Gol de la máquina'
             flashT = 1
             env.sfx.tone(160, 300, 'sawtooth', 0.06)
+            env.fx.vibrate(120)
             resetPuck(true)
             break
           }

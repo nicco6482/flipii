@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { validScore, type GameId } from '../server/weflipi-games.mjs'
-import { H, W, mulberry, type Factory, type MiniGame } from '../src/weflipi/engine'
+import { H, W, mulberry, noFx, type Factory, type MiniGame } from '../src/weflipi/engine'
 import { apilar } from '../src/weflipi/games/apilar'
 import { bolos } from '../src/weflipi/games/bolos'
 import { coches } from '../src/weflipi/games/coches'
@@ -8,6 +8,8 @@ import { dardos, dartScore } from '../src/weflipi/games/dardos'
 import { flappy } from '../src/weflipi/games/flappy'
 import { golf } from '../src/weflipi/games/golf'
 import { basket } from '../src/weflipi/games/basket'
+import { billar } from '../src/weflipi/games/billar'
+import { futbolin } from '../src/weflipi/games/futbolin'
 import { hockey } from '../src/weflipi/games/hockey'
 import { penaltis } from '../src/weflipi/games/penaltis'
 import { calculo } from '../src/weflipi/games/calculo'
@@ -25,7 +27,7 @@ const sfx = { tone: () => undefined, noise: () => undefined }
 /** Drive a game headlessly with `script(game, frame)` until it ends; returns the final score. */
 async function play(factory: Factory, script: (g: MiniGame, frame: number) => void, maxFrames = 20_000): Promise<number | null> {
   let result: number | null = null
-  const game = factory({ rand: mulberry(42), score: () => undefined, end: s => (result ??= s), sfx })
+  const game = factory({ rand: mulberry(42), score: () => undefined, end: s => (result ??= s), sfx, fx: noFx })
   for (let f = 0; f < maxFrames && result === null; f += 1) {
     script(game, f)
     game.update(1 / 60)
@@ -137,7 +139,7 @@ describe('minigames', () => {
 
   it('basket: a straight medium flick is a clean basket worth 3', async () => {
     let first = -1
-    const game = basket({ rand: mulberry(1), score: n => first < 0 && (first = n), end: () => undefined, sfx })
+    const game = basket({ rand: mulberry(1), score: n => first < 0 && (first = n), end: () => undefined, sfx, fx: noFx })
     tap(game)
     for (let f = 0; f < 120; f += 1) game.update(1 / 60)
     expect(first).toBe(3)
@@ -153,5 +155,13 @@ describe('minigames', () => {
 
   it('hockey runs a 60 s match', async () => {
     expectValid('hockey', await play(hockey, (g, f) => f % 30 === 0 && g.down?.(W / 2 + ((f / 30) % 2 ? 60 : -60), 500)))
+  })
+
+  it('futbolin runs a 60 s match', async () => {
+    expectValid('futbolin', await play(futbolin, (g, f) => f % 20 === 0 && g.down?.(W / 2 + Math.sin(f / 50) * 120, 500)))
+  })
+
+  it('billar: the break scatters the rack and the game ends with a valid score', async () => {
+    expectValid('billar', await play(billar, (g, f) => f % 240 === 0 && tap(g), 40_000))
   })
 })

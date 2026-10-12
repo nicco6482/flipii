@@ -13,7 +13,23 @@ export type Env = {
   /** Finish the run with the final score (call once). */
   end: (score: number) => void
   sfx: Sfx
+  /** Game feel: particles, screen shake, floating text and phone vibration. */
+  fx: Fx
 }
+
+export type Fx = {
+  /** Particle burst at world (x, y). */
+  burst: (x: number, y: number, color?: string, count?: number, speed?: number) => void
+  /** Shake the screen; power ~0.2 (tap) to 1 (explosion). */
+  shake: (power: number) => void
+  /** Floating text that rises and fades ("+3", "¡GOL!"). */
+  pop: (x: number, y: number, label: string, color?: string) => void
+  /** Phone vibration in ms (ignored where unsupported or muted). */
+  vibrate: (ms: number) => void
+}
+
+/** No-op effects, for headless tests. */
+export const noFx: Fx = { burst: () => undefined, shake: () => undefined, pop: () => undefined, vibrate: () => undefined }
 
 export interface MiniGame {
   /** Colour painted outside the 400×700 world on wide or tall screens. */
@@ -124,12 +140,43 @@ export function text(g: CanvasRenderingContext2D, s: string, x: number, y: numbe
 // ─── Runner ─────────────────────────────────────────────────────────────
 
 /** Mount `factory` on `canvas`. Returns a stop function that removes every listener. */
-export function run(canvas: HTMLCanvasElement, factory: Factory, env: Omit<Env, 'sfx'>): () => void {
+export function run(canvas: HTMLCanvasElement, factory: Factory, env: Omit<Env, 'sfx' | 'fx'>): () => void {
   const g = canvas.getContext('2d')!
   let ended = false
+  type Particle = { x: number; y: number; vx: number; vy: number; life: number; max: number; color: string; size: number }
+  type Pop = { x: number; y: number; label: string; color: string; life: number }
+  const particles: Particle[] = []
+  const pops: Pop[] = []
+  let shakeAmt = 0
+  const PALETTE = ['#ffd35c', '#ff5f7e', '#7ef9ff', '#2bd47d', '#a77bff', '#ff9f43']
+  const fx: Fx = {
+    burst(x, y, color, count = 18, speed = 320) {
+      for (let i = 0; i < count && particles.length < 400; i += 1) {
+        const a = Math.random() * Math.PI * 2
+        const v = speed * (0.35 + Math.random() * 0.65)
+        const life = 0.45 + Math.random() * 0.45
+        particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - speed * 0.3, life, max: life, color: color ?? PALETTE[i % PALETTE.length], size: 3 + Math.random() * 4 })
+      }
+    },
+    shake(power) {
+      shakeAmt = Math.min(1.2, Math.max(shakeAmt, power))
+    },
+    pop(x, y, label, color = '#ffd35c') {
+      pops.push({ x, y, label, color, life: 1 })
+    },
+    vibrate(ms) {
+      if (muted()) return
+      try {
+        navigator.vibrate?.(ms)
+      } catch {
+        /* unsupported */
+      }
+    },
+  }
   const game = factory({
     ...env,
     sfx,
+    fx,
     end: score => {
       if (ended) return
       ended = true
@@ -160,6 +207,16 @@ export function run(canvas: HTMLCanvasElement, factory: Factory, env: Omit<Env, 
     const dt = Math.min(1 / 30, (now - last) / 1000)
     last = now
     if (!ended) game.update(dt)
+    for (const p of particles) {
+      p.vy += 900 * dt
+      p.x += p.vx * dt
+      p.y += p.vy * dt
+      p.life -= dt
+    }
+    for (let i = particles.length - 1; i >= 0; i -= 1) if (particles[i].life <= 0) particles.splice(i, 1)
+    for (const p of pops) p.life -= dt * 0.9
+    while (pops.length && pops[0].life <= 0) pops.shift()
+    shakeAmt = Math.max(0, shakeAmt - dt * 2.5)
     g.setTransform(1, 0, 0, 1, 0, 0)
     g.fillStyle = game.bg
     g.fillRect(0, 0, canvas.width, canvas.height)
@@ -168,7 +225,19 @@ export function run(canvas: HTMLCanvasElement, factory: Factory, env: Omit<Env, 
     g.beginPath()
     g.rect(0, 0, W, H)
     g.clip()
+    if (shakeAmt > 0) g.translate((Math.random() - 0.5) * shakeAmt * 16, (Math.random() - 0.5) * shakeAmt * 16)
     game.draw(g)
+    for (const p of particles) {
+      g.globalAlpha = Math.max(0, p.life / p.max)
+      g.fillStyle = p.color
+      g.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size)
+    }
+    g.globalAlpha = 1
+    for (const p of pops) {
+      g.globalAlpha = Math.min(1, p.life * 2)
+      text(g, p.label, p.x, p.y - (1 - p.life) * 60, 28 + (1 - p.life) * 6, p.color)
+    }
+    g.globalAlpha = 1
     g.restore()
     raf = requestAnimationFrame(frame)
   }

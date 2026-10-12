@@ -49,6 +49,7 @@ export const colores: Factory = env => {
         shake = 1
         env.score(score)
         env.sfx.tone(150, 200, 'sawtooth', 0.06)
+        env.fx.vibrate(60)
         next()
       }
       if (t <= 0) env.end(Math.max(0, score))
@@ -67,6 +68,11 @@ export const colores: Factory = env => {
         if (!good) shake = 1
         env.score(score)
         env.sfx.tone(good ? 700 : 150, good ? 70 : 200, good ? 'triangle' : 'sawtooth', 0.06)
+        if (good) env.fx.burst(r.x + BTN.w / 2, r.y + BTN.h / 2, COLORS[i].hex, 12, 220)
+        else {
+          env.fx.shake(0.35)
+          env.fx.vibrate(60)
+        }
         next()
         return
       }

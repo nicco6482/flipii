@@ -66,6 +66,9 @@ export const dardos: Factory = env => {
           env.score(total)
           env.sfx.tone(s.points >= 50 ? 990 : s.points >= 40 ? 784 : s.points ? 523 : 196, 110, 'triangle', 0.08)
           env.sfx.noise(40, 0.06)
+          env.fx.burst(x, y, s.points >= 50 ? '#ff2d55' : s.points >= 40 ? '#7ef9ff' : '#ffd35c', s.points >= 40 ? 26 : 10, 220)
+          if (s.points >= 40) env.fx.shake(0.3)
+          env.fx.vibrate(s.points >= 40 ? 40 : 12)
           flight = null
           if (thrown >= DARTS) doneT = 0
         }

@@ -42,7 +42,13 @@ export const penaltis: Factory = env => {
       env.sfx.tone(784, 160, 'triangle', 0.08)
       setTimeout(() => env.sfx.tone(1047, 220, 'triangle', 0.08), 120)
       env.sfx.noise(400, 0.05)
-    } else env.sfx.tone(200, 260, 'sawtooth', 0.05)
+      env.fx.burst(current.x, current.y, undefined, 45, 420)
+      env.fx.shake(0.5)
+      env.fx.vibrate(80)
+    } else {
+      env.sfx.tone(200, 260, 'sawtooth', 0.05)
+      env.fx.vibrate(60)
+    }
     result = msg
     resultT = 1.3
     pause = 1.3

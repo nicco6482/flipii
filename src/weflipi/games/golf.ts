@@ -149,6 +149,8 @@ export const golf: Factory = env => {
           banner = strokes === 1 ? '¡HOYO EN UNO!' : diff <= -1 ? '¡BIRDIE!' : diff === 0 ? 'PAR' : `+${diff}`
           bannerT = 1.4
           env.sfx.tone(523, 120, 'triangle', 0.08)
+          env.fx.burst(cx, cy, undefined, 30, 300)
+          env.fx.vibrate(50)
           setTimeout(() => env.sfx.tone(784, 180, 'triangle', 0.08), 120)
           return
         }

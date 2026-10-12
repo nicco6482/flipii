@@ -74,6 +74,11 @@ export const dados: Factory = env => {
       pop = 1
       env.score(results.reduce((a, b) => a + b, 0))
       env.sfx.tone(face === 6 ? 880 : 440, face === 6 ? 220 : 90, 'triangle', 0.08)
+      if (face === 6) {
+        env.fx.burst(W / 2, 330, '#ffd35c', 30, 340)
+        env.fx.shake(0.3)
+      }
+      env.fx.vibrate(face === 6 ? 50 : 15)
       env.sfx.noise(60, 0.05)
       face = 1 + Math.floor(env.rand() * 6)
       acc = 0

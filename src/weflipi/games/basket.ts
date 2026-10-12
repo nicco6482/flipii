@@ -84,6 +84,7 @@ export const basket: Factory = env => {
       b.touched = true
       shake = 0.5
       env.sfx.tone(140, 70, 'square', 0.06)
+      env.fx.vibrate(20)
     }
     if (b.y < RIM_Y - r) b.above = true
     // Thrown over the backboard: it's gone, no basket.
@@ -100,6 +101,9 @@ export const basket: Factory = env => {
       popT = 1.2
       netT = 0.6
       env.sfx.tone(b.touched ? 660 : 880, 140, 'triangle', 0.08)
+      env.fx.burst(hoopX, RIM_Y + 20, b.touched ? '#ff9f43' : '#ffd35c', b.touched ? 18 : 36, 320)
+      if (!b.touched) env.fx.shake(0.35)
+      env.fx.vibrate(b.touched ? 25 : 60)
       if (!b.touched) setTimeout(() => env.sfx.tone(1175, 160, 'triangle', 0.07), 90)
     }
   }

@@ -62,6 +62,8 @@ export const apilar: Factory = env => {
         // Perfect streaks slowly grow the block back.
         if (combo >= 3) cur.w = Math.min(220, cur.w + 10)
         env.sfx.tone(520 + combo * 60, 120, 'triangle', 0.08)
+        env.fx.burst(cur.x + cur.w / 2, levelY(tower.length) + cam, '#7ef9ff', 16, 260)
+        env.fx.vibrate(15)
       } else {
         combo = 0
         const left = Math.max(cur.x, prev.x)
@@ -70,6 +72,8 @@ export const apilar: Factory = env => {
           chips.push({ x: cur.x, y, w: cur.w, vy: 0, hue: cur.hue, rot: 0 })
           over = true
           env.sfx.tone(200, 400, 'sawtooth', 0.06, -150)
+          env.fx.shake(0.6)
+          env.fx.vibrate(120)
           return
         }
         if (cur.x < left) chips.push({ x: cur.x, y, w: left - cur.x, vy: 0, hue: cur.hue, rot: 0 })
