@@ -118,6 +118,7 @@ export const basket: Factory = env => {
     ball.vx = Math.max(-420, Math.min(420, vx * 0.35))
     ball.vz = 1 / FLIGHT
     env.sfx.noise(80, 0.04)
+    env.fx.vibrate(12)
   }
 
   return {
@@ -139,7 +140,12 @@ export const basket: Factory = env => {
         const sub = 4
         for (let i = 0; i < sub; i += 1) step(ball, dt / sub)
         if (ball.y > H + 80 || ball.x < -120 || ball.x > W + 120) {
-          if (!ball.scored) streak = 0
+          if (!ball.scored) {
+            streak = 0
+            popText = '¡FALLO!'
+            popT = 0.7
+            env.fx.vibrate(18)
+          }
           ball = fresh()
         }
       }
@@ -203,6 +209,33 @@ export const basket: Factory = env => {
       g.strokeStyle = '#ff5a2e'
       g.lineWidth = 4
       g.strokeRect(hoopX - 34, RIM_Y - 52, 68, 48)
+      if (drag.length && ball && !ball.live) {
+        const first = drag[0]
+        const last = drag[drag.length - 1]
+        const dx = last.x - first.x
+        const dy = last.y - first.y
+        const len = Math.max(1, Math.hypot(dx, dy))
+        const power = Math.min(1, Math.max(0.25, -dy / 170))
+        const aimX = START.x + Math.max(-110, Math.min(110, dx * 0.65))
+        g.save()
+        g.globalAlpha = 0.8
+        g.strokeStyle = power > 0.75 ? '#ffd35c' : '#7ef9ff'
+        g.lineWidth = 3
+        g.setLineDash([7, 8])
+        g.beginPath()
+        g.moveTo(START.x, START.y)
+        g.quadraticCurveTo(aimX, START.y - 150 - power * 90, hoopX, RIM_Y + 8)
+        g.stroke()
+        g.setLineDash([])
+        g.fillStyle = 'rgba(27,24,56,0.75)'
+        rrect(g, 24, H - 58, W - 48, 12, 6)
+        g.fill()
+        g.fillStyle = power > 0.75 ? '#ffd35c' : '#7ef9ff'
+        rrect(g, 24, H - 58, (W - 48) * power, 12, 6)
+        g.fill()
+        text(g, len > 8 ? 'Suelta para lanzar' : 'Desliza hacia arriba', W / 2, H - 78, 15, '#fff7e8', 'center', 800)
+        g.restore()
+      }
       const drawBall = (b: Ball) => {
         const s = scaleOf(b.z)
         const r = R * s
