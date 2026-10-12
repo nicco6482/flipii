@@ -38,7 +38,10 @@ export const coches: Factory = env => {
     if (crashed) return
     started = true
     const next = Math.max(0, Math.min(2, lane + d))
-    if (next !== lane) env.sfx.tone(420, 50, 'triangle', 0.04, 120)
+    if (next !== lane) {
+      env.sfx.tone(420, 50, 'triangle', 0.04, 120)
+      env.fx.vibrate(8)
+    }
     lane = next
   }
 
@@ -46,13 +49,22 @@ export const coches: Factory = env => {
     g.fillStyle = 'rgba(0,0,0,0.25)'
     rrect(g, cx - CAR_W / 2 + 5, y + 6, CAR_W, CAR_H, 12)
     g.fill()
-    g.fillStyle = color
+    const body = g.createLinearGradient(cx - CAR_W / 2, y, cx + CAR_W / 2, y + CAR_H)
+    body.addColorStop(0, '#ffffff')
+    body.addColorStop(0.12, color)
+    body.addColorStop(0.7, color)
+    body.addColorStop(1, '#1b1838')
+    g.fillStyle = body
     g.strokeStyle = '#1b1838'
     g.lineWidth = 3
     rrect(g, cx - CAR_W / 2, y, CAR_W, CAR_H, 12)
     g.fill()
     g.stroke()
-    g.fillStyle = '#1b1838'
+    const glass = g.createLinearGradient(0, y + 10, 0, y + 80)
+    glass.addColorStop(0, '#92e8ff')
+    glass.addColorStop(0.35, '#35517d')
+    glass.addColorStop(1, '#10152d')
+    g.fillStyle = glass
     rrect(g, cx - CAR_W / 2 + 8, y + (player ? 22 : 14), CAR_W - 16, 18, 5)
     g.fill()
     rrect(g, cx - CAR_W / 2 + 8, y + (player ? 62 : 56), CAR_W - 16, 14, 5)
@@ -60,6 +72,13 @@ export const coches: Factory = env => {
     g.fillStyle = player ? '#fff7e8' : '#ff2d55'
     g.fillRect(cx - CAR_W / 2 + 6, y + (player ? 2 : CAR_H - 7), 10, 5)
     g.fillRect(cx + CAR_W / 2 - 16, y + (player ? 2 : CAR_H - 7), 10, 5)
+    g.fillStyle = '#101329'
+    for (const wheelY of [y + 18, y + CAR_H - 18]) {
+      g.beginPath()
+      g.ellipse(cx - CAR_W / 2 - 2, wheelY, 6, 12, 0, 0, Math.PI * 2)
+      g.ellipse(cx + CAR_W / 2 + 2, wheelY, 6, 12, 0, 0, Math.PI * 2)
+      g.fill()
+    }
   }
 
   return {
