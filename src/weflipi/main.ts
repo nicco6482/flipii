@@ -6,7 +6,7 @@ import * as api from './api'
 import { CATALOG } from './catalog'
 import { startCover } from './cover'
 import { mulberry, muted, run, setMuted, sfx } from './engine'
-import { apkStepsHtml, canPrompt, downloadApk, isInstalled, nativeShare, onInstallChange, platform, promptInstall, registerServiceWorker, stepsHtml } from './install'
+import { apkStepsHtml, canPrompt, downloadApk, isInstalled, nativeShare, onInstallChange, platform, promptInstall, registerServiceWorker, showIosGuide, stepsHtml } from './install'
 
 const AUTHOR = 'nicco6482'
 const TABS = [
@@ -319,14 +319,18 @@ function installBanner(): string {
   return `
     <section class="card install-banner">
       <img src="/icons/icon-192.png" alt="" width="52" height="52" />
-      <div><b>Instala weflipi</b><small>Tenla en tu pantalla de inicio como una app. Gratis.</small></div>
-      <button class="btn primary small" data-action="install">${platform() === 'android' ? 'Descargar' : canPrompt() ? 'Instalar' : 'Cómo'}</button>
+      <div><b>${platform() === 'ios' ? 'Pon weflipi en tu iPhone' : 'Instala weflipi'}</b><small>Tenla en tu pantalla de inicio como una app. Gratis.</small></div>
+      <button class="btn primary small" data-action="install">${platform() === 'android' ? 'Descargar' : platform() === 'ios' ? 'Añadir' : canPrompt() ? 'Instalar' : 'Cómo'}</button>
       <button class="x" data-action="install-hide" aria-label="Ocultar">✕</button>
     </section>`
 }
 
 async function install(): Promise<void> {
   const p = platform()
+  if (p === 'ios') {
+    showIosGuide()
+    return
+  }
   if (p === 'android') {
     downloadApk()
     installSheet('Descargando weflipi…', 'Cuando termine la descarga:', apkStepsHtml())
@@ -336,7 +340,7 @@ async function install(): Promise<void> {
     if (await promptInstall()) toast('¡weflipi instalada! Búscala en tu pantalla de inicio')
     return
   }
-  installSheet('Instala weflipi', p === 'ios' ? 'En iPhone se instala desde Safari en 3 pasos:' : 'Así se instala:', stepsHtml())
+  installSheet('Instala weflipi', 'Así se instala:', stepsHtml())
 }
 
 function installSheet(title: string, lead: string, steps: string): void {

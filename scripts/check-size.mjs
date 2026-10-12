@@ -19,7 +19,8 @@ const files = walk('dist').map(path => {
 const sum = pred => files.filter(pred).reduce((n, f) => n + f.wire, 0)
 const js = sum(f => f.path.endsWith('.js'))
 const fonts = sum(f => f.path.endsWith('.woff2'))
-const transfer = sum(f => !f.path.endsWith('.txt'))
+// iPhone launch screens and store screenshots are only fetched by the device that needs one.
+const transfer = sum(f => !f.path.endsWith('.txt') && !/[\\/](splash|screenshots)[\\/]/.test(f.path))
 const mb = n => `${(n / MB).toFixed(2)} MB`
 console.log(`bundle (gzip): js ${mb(js)} / fonts ${mb(fonts)} / transfer ${mb(transfer)}`)
 const over = Object.entries({ js, fonts, transfer }).filter(([k, v]) => v > BUDGET[k])

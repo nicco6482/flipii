@@ -112,3 +112,56 @@ export function stepsHtml(): string {
       <li><b>2</b><span>Para el móvil, escanea el código QR o mándate el enlace.</span></li>
     </ol>`
 }
+
+/**
+ * Big illustrated iPhone guide: drawn mock-ups of exactly what to tap in Safari. Apple doesn't
+ * let a web page add itself to the home screen, so this is the most direct path there is.
+ */
+export function iosGuideHtml(): string {
+  const icon = (label: string, svg: string, on = false) => `<span class="ig-btn ${on ? 'is-on' : ''}" aria-label="${label}">${svg}</span>`
+  const back = '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  const fwd = '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  const book = '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 5c3-1 6-1 8 1 2-2 5-2 8-1v14c-3-1-6-1-8 1-2-2-5-2-8-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>'
+  const tabs = '<svg viewBox="0 0 24 24" width="22" height="22"><rect x="7" y="7" width="13" height="13" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 16V6a2 2 0 0 1 2-2h10" fill="none" stroke="currentColor" stroke-width="2"/></svg>'
+  return `
+  <div class="ios-guide">
+    <div class="ig-step">
+      <div class="ig-head"><span class="ig-n">1</span><h3>Pulsa <b>Compartir</b></h3></div>
+      <div class="ig-mock ig-bar">${icon('Atrás', back)}${icon('Adelante', fwd)}${icon('Compartir', SHARE_ICON.replace(/22/g, '30'), true)}${icon('Favoritos', book)}${icon('Pestañas', tabs)}</div>
+      <p>Es el cuadrado con la flecha hacia arriba, en la barra de Safari. Si no lo ves, toca primero la barra de abajo o el botón <b>⋯</b>.</p>
+    </div>
+    <div class="ig-step">
+      <div class="ig-head"><span class="ig-n">2</span><h3>Elige <b>Añadir a pantalla de inicio</b></h3></div>
+      <div class="ig-mock ig-sheet">
+        <div><span>Copiar</span><i>⧉</i></div>
+        <div><span>Añadir a favoritos</span><i>☆</i></div>
+        <div class="is-on"><span>Añadir a pantalla de inicio</span><i>${PLUS_ICON}</i></div>
+      </div>
+      <p>Desliza hacia abajo en el menú hasta encontrarlo.</p>
+    </div>
+    <div class="ig-step">
+      <div class="ig-head"><span class="ig-n">3</span><h3>Pulsa <b>Añadir</b> y ¡a jugar!</h3></div>
+      <div class="ig-mock ig-home">
+        ${['#5b8cff', '#2bd47d', '#ff9f43'].map(c => `<span class="ig-app" style="--c:${c}"></span>`).join('')}
+        <span class="ig-app is-on"><img src="/icons/icon-192.png" alt="" /><small>weflipi</small></span>
+      </div>
+      <p>weflipi aparecerá en tu pantalla de inicio. Ábrela desde ahí: a pantalla completa, como una app.</p>
+    </div>
+    <p class="ig-whatsapp">💬 <b>¿Lo has abierto desde WhatsApp o Instagram?</b> Primero pulsa la brújula 🧭 o <b>⋯ → Abrir en Safari</b>; desde ahí sí se puede añadir.</p>
+  </div>`
+}
+
+/** Full-screen version of the guide, for the hub's install buttons on iPhone. */
+export function showIosGuide(): void {
+  const wrap = document.createElement('div')
+  wrap.className = 'ios-overlay'
+  wrap.innerHTML = `<div class="ios-overlay-inner">
+    <button class="icon-btn" data-close aria-label="Cerrar">✕</button>
+    <div class="ig-title"><img src="/icons/icon-192.png" alt="" width="72" height="72" /><h2>Pon weflipi en tu iPhone</h2><p class="muted">3 toques y la tendrás con su icono, como una app.</p></div>
+    ${iosGuideHtml()}
+    <button class="btn primary big" data-close>¡Entendido!</button>
+  </div>
+  <div class="safari-pointer" aria-hidden="true"><span>Compartir</span><b>⬇</b></div>`
+  document.body.appendChild(wrap)
+  wrap.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => wrap.remove()))
+}

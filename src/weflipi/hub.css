@@ -320,3 +320,42 @@ input:focus { border-color: var(--gold); }
 
 .apk-note { text-align: center; color: var(--muted); font-weight: 700; font-size: 12px; margin-top: -6px; }
 button.link { font: inherit; font-weight: 800; font-size: 14px; }
+
+/* ─── iPhone guide ────────────────────────────────────────────────────── */
+.ios-card { text-align: left; border-color: rgba(255, 211, 92, 0.5); }
+.ig-title { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; }
+.ig-title img { border-radius: 22px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45); }
+.ig-title h2 { font-size: 26px; font-style: italic; }
+.ios-guide { display: flex; flex-direction: column; gap: 14px; }
+.ig-step { background: var(--ink); border-radius: 22px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.ig-head { display: flex; align-items: center; gap: 12px; }
+.ig-head h3 { font-size: 20px; font-weight: 700; line-height: 1.2; }
+.ig-head h3 b { color: var(--gold); }
+.ig-n { flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--gold); color: var(--ink); display: grid; place-items: center; font: 900 22px/1 var(--display); box-shadow: 0 3px 0 #b8901d; }
+.ig-step p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.4; font-weight: 600; }
+.ig-step p b { color: var(--cream); }
+.ig-mock { border-radius: 18px; background: #f2f2f7; color: #1c1c1e; }
+.ig-bar { display: flex; justify-content: space-around; align-items: center; padding: 10px 6px; }
+.ig-btn { display: grid; place-items: center; width: 46px; height: 46px; color: #007aff; border-radius: 12px; }
+.ig-btn.is-on { width: 62px; height: 62px; background: #fff; box-shadow: 0 0 0 4px var(--gold), 0 0 24px 6px rgba(255, 211, 92, 0.7); animation: tap 1.4s ease-in-out infinite; }
+.ig-sheet { padding: 6px 12px; display: flex; flex-direction: column; }
+.ig-sheet div { display: flex; justify-content: space-between; align-items: center; padding: 12px 6px; font-size: 16px; font-weight: 600; border-bottom: 1px solid #d1d1d6; }
+.ig-sheet div:last-child { border-bottom: 0; }
+.ig-sheet i { font-style: normal; color: #1c1c1e; display: grid; place-items: center; }
+.ig-sheet div.is-on { background: #fff; border-radius: 12px; border: 0; box-shadow: 0 0 0 4px var(--gold), 0 0 24px 6px rgba(255, 211, 92, 0.6); animation: tap 1.4s ease-in-out infinite; }
+.ig-home { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 16px 16px 30px; background: linear-gradient(160deg, #6a5cff, #ff7eb3); }
+.ig-app { aspect-ratio: 1; border-radius: 22%; background: var(--c); opacity: 0.55; position: relative; }
+.ig-app.is-on { opacity: 1; background: none; animation: tap 1.4s ease-in-out infinite; }
+.ig-app.is-on img { width: 100%; height: 100%; border-radius: 22%; box-shadow: 0 0 0 3px #fff, 0 0 20px 4px rgba(255, 211, 92, 0.8); }
+.ig-app small { position: absolute; left: 50%; bottom: -18px; transform: translateX(-50%); color: #fff; font-weight: 700; font-size: 11px; white-space: nowrap; }
+.ig-whatsapp { margin: 0; background: rgba(43, 212, 125, 0.12); border: 2px solid rgba(43, 212, 125, 0.4); border-radius: 16px; padding: 12px; font-size: 14px; line-height: 1.4; }
+@keyframes tap { 50% { transform: scale(1.07); } }
+
+.ios-overlay { position: fixed; inset: 0; z-index: 35; background: rgba(14, 11, 34, 0.97); overflow-y: auto; animation: fade 0.2s ease both; }
+.ios-overlay-inner { max-width: 520px; margin: 0 auto; padding: calc(14px + env(safe-area-inset-top)) 16px calc(120px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 16px; }
+.ios-overlay-inner > .icon-btn { align-self: flex-end; }
+/* Bouncing arrow at the bottom centre, where Safari's share button sits. */
+.safari-pointer { position: fixed; left: 50%; bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 36; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; animation: point 1s ease-in-out infinite; }
+.safari-pointer span { background: var(--gold); color: var(--ink); font: 900 14px/1 var(--display); padding: 8px 14px; border-radius: 999px; border: 3px solid var(--ink); box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35); }
+.safari-pointer b { font-size: 44px; line-height: 1; filter: drop-shadow(0 3px 0 var(--ink)); }
+@keyframes point { 50% { transform: translate(-50%, 10px); } }
