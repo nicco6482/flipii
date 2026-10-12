@@ -12,7 +12,7 @@ import { dailySeed } from './game/level'
 import { THEMES } from './game/theme'
 import { Leaderboard, cleanName, type BoardData, type Receipt } from './online/leaderboard'
 import { challengeUrl, copyText, drawCard, readChallenge } from './online/share'
-import { UI } from './ui/ui'
+import { AUTHOR, UI } from './ui/ui'
 
 async function boot(): Promise<void> {
   const save = new SaveStore()
@@ -34,7 +34,7 @@ async function boot(): Promise<void> {
   ui.bootProgress(0.7)
 
   // Stable nickname: the saved one, or an auto name the player can change on the results screen.
-  if (!save.data.playerName) save.update({ playerName: `${i18n.locale === 'zh-CN' ? '玩家' : 'Player'}${Math.floor(1000 + Math.random() * 9000)}` })
+  if (!save.data.playerName) save.update({ playerName: `${i18n.locale === 'es' ? 'Jugador' : 'Player'}${Math.floor(1000 + Math.random() * 9000)}` })
 
   const renderer = new Renderer(canvas, save.data.quality)
   let day = boardDay()
@@ -202,6 +202,7 @@ async function boot(): Promise<void> {
       statsLine: t('share.cardStats', { floors: run.floors, chain: run.bestChain, sec: Math.round(run.durationMs / 1000) }),
       call: t('share.cardCall'),
       scan: t('share.cardScan'),
+      credit: t('title.credit', { name: AUTHOR }),
       url: shareUrl,
       name: save.data.playerName,
       colors: { sky: theme.sky, low: theme.skyLow, safe: theme.safe, safeAlt: theme.safeAlt, accent: theme.accent },

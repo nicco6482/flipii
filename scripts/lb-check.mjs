@@ -19,7 +19,7 @@ const [hs, health] = await j('GET', '/health')
 expect('health', hs === 200, JSON.stringify(health))
 const tag = Math.random().toString(36).slice(2, 6)
 const players = []
-for (const [name, score, floors] of [[`测试A${tag}`, 300, 10], [`TestB${tag}`, 700, 14], [`测试C${tag}`, 1200, 22]]) {
+for (const [name, score, floors] of [[`PruebaÑA${tag}`, 300, 10], [`TestB${tag}`, 700, 14], [`PruebaÑC${tag}`, 1200, 22]]) {
   const [gs, g] = await j('POST', '/guests', { displayName: name })
   const [rs, run] = await j('POST', '/boards/helix-v1/runs', { protocolVersion: 1, rulesVersion: 'v1', mode: 'daily', seedDay: day }, g.token)
   const [ss, rec] = await j('PUT', `/runs/${run.runId}`, { score, durationMs: 4000, floors }, g.token)
@@ -37,10 +37,10 @@ expect('reject over max score', (await j('PUT', `/runs/${run.runId}`, { score: 2
 expect('reject stale daily seed', (await j('POST', '/boards/helix-v1/runs', { protocolVersion: 1, rulesVersion: 'v1', mode: 'daily', seedDay: '2000-01-01' }, g.token))[0] === 409)
 expect('reject old client', (await j('POST', '/boards/helix-v1/runs', { protocolVersion: 1, rulesVersion: 'v0', mode: 'daily', seedDay: day }, g.token))[0] === 426)
 expect('reject missing token', (await j('POST', '/boards/helix-v1/runs', { protocolVersion: 1, rulesVersion: 'v1', mode: 'daily', seedDay: day }))[0] === 401)
-const [rn] = await j('PUT', '/players/me', { displayName: `改名${tag}` }, g.token)
+const [rn] = await j('PUT', '/players/me', { displayName: `Renombrado${tag}` }, g.token)
 expect('rename', rn === 200)
 const [ts, today] = await j('GET', '/boards/helix-v1?period=today&limit=10', null, g.token)
-expect('today board', ts === 200 && today.total >= 3 && today.myRank?.score === 300 && today.entries.some(e => e.displayName === `改名${tag}`), `total=${today.total} my=${JSON.stringify(today.myRank)}`)
+expect('today board', ts === 200 && today.total >= 3 && today.myRank?.score === 300 && today.entries.some(e => e.displayName === `Renombrado${tag}`), `total=${today.total} my=${JSON.stringify(today.myRank)}`)
 const [as, all] = await j('GET', '/boards/helix-v1?limit=5')
 expect('all-time board', as === 200 && all.entries.length > 0 && all.entries[0].score >= all.entries.at(-1).score, `total=${all.total}`)
 // Random-seed runs count for the all-time board only.

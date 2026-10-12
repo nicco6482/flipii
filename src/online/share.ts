@@ -54,6 +54,7 @@ export type CardData = {
   statsLine: string
   call: string
   scan: string
+  credit: string
   url: string
   name: string
   colors: { sky: string; low: string; safe: string; safeAlt: string; accent: string }
@@ -156,6 +157,10 @@ export async function drawCard(d: CardData): Promise<{ blob: Blob; url: string }
   g.fillStyle = '#fff7e8'
   g.textAlign = 'center'
   g.fillText(d.scan, qx + size / 2, qy + size + 62)
+  g.font = `800 30px ${d.display}`
+  g.fillStyle = '#ffd35c'
+  g.textAlign = 'left'
+  g.fillText(d.credit, 80, qy + size + 62)
 
   const blob = await new Promise<Blob>((resolve, reject) => cv.toBlob(b => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png'))
   return { blob, url: URL.createObjectURL(blob) }

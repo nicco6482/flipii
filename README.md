@@ -1,6 +1,6 @@
 # Helix Drift
 
-**Helix Drift** is a one-input 3D arcade tower-drop game built on the Manus `game-3d` Three.js + Rapier runtime. Rotate the helix tower and guide the bouncing ball through the gaps, all the way to the base. The remix preserves the supplied daily tower, practice mode, challenge sharing, same-origin leaderboard client, and English / Simplified Chinese localization.
+**Helix Drift** is a one-input 3D arcade tower-drop game built on the Manus `game-3d` Three.js + Rapier runtime. Rotate the helix tower and guide the bouncing ball through the gaps, all the way to the base. The remix preserves the supplied daily tower, practice mode, challenge sharing, same-origin leaderboard client, and Spanish / English localization. Made by **nicco6482**.
 
 ## Development
 
@@ -38,4 +38,4 @@ For local backend testing, set `HELIX_API_PROXY` to a compatible server URL befo
 
 ## Localization and fonts
 
-All player-facing strings are maintained in both `src/i18n/en.json` and `src/i18n/zh-CN.json`. The supplied Sora, Figtree and Noto Sans SC font files and their license notices are kept in `public/fonts/`.
+All player-facing strings are maintained in both `src/i18n/es.json` (default) and `src/i18n/en.json` (used for English browsers). The supplied Sora and Figtree font files and their license notices are kept in `public/fonts/`.

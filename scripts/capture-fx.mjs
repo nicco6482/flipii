@@ -7,7 +7,7 @@ const url = process.argv[2] ?? 'http://127.0.0.1:3101/'
 const out = process.argv[3] ?? '/tmp/fx'
 mkdirSync(out, { recursive: true })
 const b = await chromium.launch({ args: ['--ignore-gpu-blocklist', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] })
-const p = await (await b.newContext({ viewport: { width: 1280, height: 800 }, locale: 'zh-CN' })).newPage()
+const p = await (await b.newContext({ viewport: { width: 1280, height: 800 }, locale: 'es-ES' })).newPage()
 const errs = []
 p.on('pageerror', e => errs.push(String(e)))
 p.on('console', m => m.type() === 'error' && errs.push(m.text()))

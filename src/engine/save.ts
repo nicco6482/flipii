@@ -2,7 +2,7 @@
  * Versioned local save. Everything the player keeps between sessions lives in one JSON record so
  * it is easy to migrate. Corrupt or foreign data falls back to defaults instead of crashing.
  */
-export type Locale = 'en' | 'zh-CN'
+export type Locale = 'es' | 'en'
 export type Quality = 'low' | 'medium' | 'high'
 
 export type ScoreEntry = { name: string; score: number; seconds: number; at: number }
@@ -72,7 +72,7 @@ export function parseSave(raw: string | null): SaveData {
   const board = Array.isArray(data.leaderboard) ? data.leaderboard : []
   return {
     version: 1,
-    locale: data.locale === 'en' || data.locale === 'zh-CN' ? data.locale : '',
+    locale: data.locale === 'es' || data.locale === 'en' ? data.locale : '',
     musicVolume: clamp01(data.musicVolume, base.musicVolume),
     sfxVolume: clamp01(data.sfxVolume, base.sfxVolume),
     muted: data.muted === true,
