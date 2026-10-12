@@ -27,13 +27,13 @@ export const vasos: Factory = env => {
     round += 1
     pos = [0, 1, 2]
     ballCup = Math.floor(env.rand() * CUPS)
-    const n = 3 + round * 2
+    const n = 4 + round * 3
     swaps = Array.from({ length: n }, () => {
       const a = Math.floor(env.rand() * CUPS)
       const b = (a + 1 + Math.floor(env.rand() * (CUPS - 1))) % CUPS
       return [a, b] as [number, number]
     })
-    swapDur = Math.max(0.16, 0.5 - round * 0.04)
+    swapDur = Math.max(0.11, 0.42 - round * 0.05)
     swapI = 0
     swapT = 0
     phase = 'show'

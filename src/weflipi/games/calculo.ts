@@ -20,24 +20,24 @@ export const calculo: Factory = env => {
   const int = (a: number, b: number) => a + Math.floor(env.rand() * (b - a + 1))
   const next = () => {
     level += 1
-    const kind = level < 6 ? 0 : level < 14 ? int(0, 2) : int(0, 3)
+    const kind = level < 4 ? 0 : level < 9 ? int(0, 2) : int(0, 3)
     let a: number
     let b: number
     let answer: number
     let label: string
     if (kind === 0) {
-      a = int(2, 9 + level * 2)
-      b = int(2, 9 + level * 2)
+      a = int(2, 9 + level * 4)
+      b = int(2, 9 + level * 4)
       answer = a + b
       label = `${a} + ${b}`
     } else if (kind === 1) {
-      a = int(10, 20 + level * 3)
+      a = int(10, 20 + level * 5)
       b = int(2, a - 1)
       answer = a - b
       label = `${a} − ${b}`
     } else if (kind === 2) {
       a = int(2, 9)
-      b = int(2, Math.min(12, 3 + level / 2))
+      b = int(2, Math.min(15, 4 + level / 2))
       answer = a * b
       label = `${a} × ${b}`
     } else {

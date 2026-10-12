@@ -16,7 +16,7 @@ const laneX = (lane: number) => ROAD_X + LANE * lane + LANE / 2
 export const coches: Factory = env => {
   let lane = 1
   let x = laneX(1)
-  let speed = 330
+  let speed = 360
   let dist = 0
   let started = false
   let crashed = false
@@ -72,14 +72,15 @@ export const coches: Factory = env => {
         return
       }
       if (!started) return
-      speed = Math.min(980, speed + dt * 11)
+      // Keeps accelerating: ~+18 km/h every 4 s, up to 1300 px/s.
+      speed = Math.min(1300, speed + dt * 18)
       const dy = speed * dt
       dist += dy
       dash = (dash + dy) % 80
       nextRow -= dy
       if (nextRow <= 0) {
         spawnRow()
-        nextRow = Math.max(250, speed * 0.62) + env.rand() * 120
+        nextRow = Math.max(220, speed * 0.5) + env.rand() * 100
       }
       for (const c of cars) c.y += dy - c.speed * dt
       while (cars.length && cars[0].y > H + 20) cars.shift()

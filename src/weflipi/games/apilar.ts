@@ -4,7 +4,7 @@ import { H, W, rrect, text, type Factory } from '../engine'
 
 const BLOCK_H = 34
 const BASE_Y = H - 90
-const PERFECT = 5
+const PERFECT = 4
 
 type Block = { x: number; w: number; hue: number }
 type Chip = { x: number; y: number; w: number; vy: number; hue: number; rot: number }
@@ -21,7 +21,8 @@ export const apilar: Factory = env => {
   let combo = 0
   const chips: Chip[] = []
 
-  const speed = () => Math.min(430, 150 + tower.length * 9)
+  // Speeds up with every floor: ~190 px/s at the start, 650 px/s from floor ~33.
+  const speed = () => Math.min(650, 190 + tower.length * 14)
   const levelY = (i: number) => BASE_Y - i * BLOCK_H
 
   return {

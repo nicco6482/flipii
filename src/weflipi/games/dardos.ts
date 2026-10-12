@@ -42,7 +42,8 @@ export const dardos: Factory = env => {
 
   const aim = () => {
     // Wobble grows the longer you hold: aim fast but not too fast.
-    const amp = 10 + Math.min(26, hold * 9)
+    // Shakier with every dart and the longer you hold.
+    const amp = 12 + thrown * 2.5 + Math.min(30, hold * 11)
     return { x: fx + Math.sin(t * 2.9) * amp + Math.sin(t * 5.3) * amp * 0.35, y: fy - FINGER_OFFSET + Math.cos(t * 2.3) * amp + Math.sin(t * 4.1) * amp * 0.3 }
   }
 

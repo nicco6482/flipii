@@ -21,10 +21,14 @@ export const deslizar: Factory = env => {
   let sx = 0
   let sy = 0
   let swiping = false
+  let left = 0
+  // Time for each arrow: 1.6 s at first, down to 0.55 s.
+  const limit = () => Math.max(0.55, 1.6 - score * 0.045)
 
   const next = () => {
     dir = DIRS[Math.floor(env.rand() * 4)]
     red = score > 3 && env.rand() < Math.min(0.5, 0.2 + score * 0.01)
+    left = limit()
   }
   next()
 
@@ -50,6 +54,15 @@ export const deslizar: Factory = env => {
       fly = Math.max(0, fly - dt * 4)
       if (!started) return
       t -= dt
+      left -= dt
+      if (left <= 0) {
+        good = false
+        score = Math.max(0, score - 1)
+        flash = 1
+        env.score(score)
+        env.sfx.tone(150, 200, 'sawtooth', 0.06)
+        next()
+      }
       if (t <= 0) env.end(score)
     },
     down(x, y) {
@@ -122,6 +135,14 @@ export const deslizar: Factory = env => {
         arrow(flyDir, '#2bd47d', v[0], v[1], fly)
       }
       if (started) arrow(dir, red ? '#ff2d55' : '#2bd47d', 0, 0, 1)
+      if (started) {
+        g.fillStyle = 'rgba(255,255,255,0.15)'
+        rrect(g, 80, 490, W - 160, 10, 5)
+        g.fill()
+        g.fillStyle = left < 0.4 ? '#ff2d55' : '#ffd35c'
+        rrect(g, 80, 490, (W - 160) * Math.max(0, left / limit()), 10, 5)
+        g.fill()
+      }
       text(g, started ? (red ? '¡AL REVÉS!' : 'Desliza así') : 'Toca para empezar', W / 2, 560, 26, red ? '#ff5f7e' : '#fff7e8')
       text(g, 'Verde: hacia donde apunta · Roja: al contrario', W / 2, 610, 15, 'rgba(255,247,232,0.75)', 'center', 700)
       if (started) text(g, `${Math.ceil(t)} s`, W / 2, 660, 18)

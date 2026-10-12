@@ -21,12 +21,12 @@ export const flappy: Factory = env => {
   const pipes: Pipe[] = []
   const clouds = Array.from({ length: 6 }, (_, i) => ({ x: i * 90 + env.rand() * 60, y: 60 + env.rand() * 260, s: 0.6 + env.rand() * 0.8 }))
 
-  const speed = () => Math.min(230, 165 + score * 1.5)
+  const speed = () => Math.min(340, 175 + score * 4)
   const spawn = () => {
-    const size = Math.max(138, 182 - score * 1.2)
+    const size = Math.max(122, 178 - score * 2)
     const gap = 120 + env.rand() * (GROUND - 240)
     pipes.push({ x: next, gap, size, passed: false })
-    next += 205 + env.rand() * 40
+    next += Math.max(170, 210 - score * 1.5) + env.rand() * 40
   }
   const die = () => {
     if (dead) return

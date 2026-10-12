@@ -37,8 +37,8 @@ export const ladrillos: Factory = env => {
     const left = (W - (COLS * BW + (COLS - 1) * GAP)) / 2
     for (let r = 0; r < ROWS; r += 1)
       for (let c = 0; c < COLS; c += 1) if (level === 1 || env.rand() > 0.12) bricks.push({ x: left + c * (BW + GAP), y: TOP + r * (BH + GAP), hp: level > 2 && r < 2 ? 2 : 1, row: r })
-    speed = 420 + (level - 1) * 60
-    pw = Math.max(64, 96 - (level - 1) * 8)
+    speed = 440 + (level - 1) * 70
+    pw = Math.max(56, 90 - (level - 1) * 10)
   }
   build()
 
@@ -64,7 +64,12 @@ export const ladrillos: Factory = env => {
         by = PADDLE_Y - R - 2
         return
       }
-      const steps = 4
+      // The ball gets a little faster every second it stays in play.
+      const k = Math.min(900, speed + dt * 14) / speed
+      speed *= k
+      vx *= k
+      vy *= k
+      const steps = 5
       for (let s = 0; s < steps; s += 1) {
         const h = dt / steps
         bx += vx * h
