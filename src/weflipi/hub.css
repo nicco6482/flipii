@@ -105,10 +105,12 @@ h4 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: 
 .facts div { background: rgba(126, 249, 255, 0.08); border-radius: 10px; padding: 8px 10px; }
 .facts b { color: var(--cyan); }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
-.game-tile { border: 3px solid var(--ink); border-radius: 14px; background: var(--ink); padding: 12px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; box-shadow: inset 0 -4px 0 var(--accent); }
+.grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.game-tile { position: relative; min-width: 0; border: 3px solid var(--ink); border-radius: 14px; background: var(--ink); padding: 12px 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; box-shadow: inset 0 -4px 0 var(--accent); }
 .game-tile span { font-size: 30px; }
-.game-tile b { font-size: 13px; font-family: var(--display); }
+.game-tile b { font-size: 12px; line-height: 1.15; font-family: var(--display); max-width: 100%; text-align: center; overflow-wrap: anywhere; }
+.game-tile.is-today { border-color: var(--accent); }
+.game-tile i { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); background: var(--gold); color: var(--ink); font: 900 10px/1 var(--display); font-style: normal; padding: 3px 6px; border-radius: 6px; border: 2px solid var(--ink); letter-spacing: 0.06em; }
 
 .modal-wrap { position: fixed; inset: 0; background: rgba(10, 8, 28, 0.7); display: grid; place-items: center; padding: 16px; z-index: 20; }
 .modal { width: min(420px, 100%); }

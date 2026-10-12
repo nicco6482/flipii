@@ -127,7 +127,7 @@ function renderHome(): void {
   const best = view.state?.best ?? api.localBest(day(), g.id, null, (a, b) => isBetter(g.id, a, b))
   const plays = view.state?.plays ?? 0
   const groups = view.state?.groups ?? []
-  const others = Object.values(CATALOG).filter(x => x.id !== g.id)
+  const all = Object.values(CATALOG)
   const offline = view.error
     ? `<div class="card notice">${
         view.error === 'no_database'
@@ -158,6 +158,16 @@ function renderHome(): void {
       <button class="btn primary big" data-action="play" data-game="${g.id}">▶ JUGAR</button>
       <p class="hint">Intentos ilimitados hasta que cambie el juego. Cuenta tu mejor puntuación.</p>
     </section>
+    <section class="card practice">
+      <h2>Todos los juegos</h2>
+      <p class="muted">Juega a cualquiera cuando quieras. Solo el de hoy cuenta para los grupos; el resto es para entrenar.</p>
+      <div class="grid">${all
+        .map(x => {
+          const isToday = x.id === g.id
+          return `<button class="game-tile ${isToday ? 'is-today' : ''}" style="--accent:${x.color}" data-action="${isToday ? 'play' : 'practice'}" data-game="${x.id}">${isToday ? '<i>HOY</i>' : ''}<span>${x.emoji}</span><b>${esc(x.name)}</b></button>`
+        })
+        .join('')}</div>
+    </section>
     <section class="card groups">
       <div class="section-head"><h2>Mis grupos</h2><div class="row"><button class="btn small" data-action="join">Unirme</button><button class="btn small primary" data-action="create">+ Crear</button></div></div>
       ${
@@ -165,11 +175,6 @@ function renderHome(): void {
           ? `<div class="tabs">${groups.map(x => `<button class="tab ${x.code === view.selected ? 'is-on' : ''}" data-action="group" data-code="${x.code}">${esc(x.name)} <small>${x.members}</small></button>`).join('')}</div><div data-el="group">${renderGroup()}</div>`
           : `<p class="muted">Aún no estás en ningún grupo. Crea uno y pasa el enlace a tus amigos, o únete con el código que te hayan dado.</p>`
       }
-    </section>
-    <section class="card practice">
-      <h2>Practicar otros juegos</h2>
-      <p class="muted">No cuentan para el ranking; sirven para entrenar para cuando les toque.</p>
-      <div class="grid">${others.map(x => `<button class="game-tile" style="--accent:${x.color}" data-action="practice" data-game="${x.id}"><span>${x.emoji}</span><b>${esc(x.name)}</b></button>`).join('')}</div>
     </section>
     <footer>Creado por ${esc(AUTHOR)}</footer>
   </main>`
