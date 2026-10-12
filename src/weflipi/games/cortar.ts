@@ -34,15 +34,17 @@ export const cortar: Factory = env => {
   let comboText = ''
   let comboT = 0
 
+  const pace = () => Math.min(1.45, 1 + wave * 0.02)
   const launch = () => {
     wave += 1
     const n = 1 + Math.floor(env.rand() * Math.min(4, 1 + wave / 4))
     for (let i = 0; i < n; i += 1) {
-      const bomb = wave > 2 && env.rand() < Math.min(0.28, 0.08 + wave * 0.01)
+      const bomb = wave > 2 && env.rand() < Math.min(0.35, 0.1 + wave * 0.015)
       const x = 60 + env.rand() * (W - 120)
-      things.push({ x, y: H + R, vx: (W / 2 - x) * (0.4 + env.rand() * 0.5), vy: -(820 + env.rand() * 260), rot: 0, vr: (env.rand() - 0.5) * 6, bomb, kind: Math.floor(env.rand() * FRUITS.length), cut: false })
+      // Later waves are thrown harder (and fall faster, see `pace`).
+      things.push({ x, y: H + R, vx: (W / 2 - x) * (0.4 + env.rand() * 0.5) * pace(), vy: -(820 + env.rand() * 260) * pace(), rot: 0, vr: (env.rand() - 0.5) * 6, bomb, kind: Math.floor(env.rand() * FRUITS.length), cut: false })
     }
-    nextWave = Math.max(0.55, 1.4 - wave * 0.03)
+    nextWave = Math.max(0.38, 1.2 - wave * 0.05)
   }
 
   const slice = (x1: number, y1: number, x2: number, y2: number) => {
@@ -110,7 +112,7 @@ export const cortar: Factory = env => {
       nextWave -= dt
       if (nextWave <= 0) launch()
       for (const th of things) {
-        th.vy += 1050 * dt
+        th.vy += 1050 * pace() * pace() * dt
         th.x += th.vx * dt
         th.y += th.vy * dt
         th.rot += th.vr * dt

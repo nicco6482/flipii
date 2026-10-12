@@ -20,11 +20,15 @@ export const colores: Factory = env => {
   let flash = 0
   let good = true
   let shake = 0
+  let left = 0
+  // Time to answer each word: 2.6 s at first, down to 0.9 s.
+  const limit = () => Math.max(0.9, 2.6 - score * 0.07)
 
   const next = () => {
     word = Math.floor(env.rand() * 4)
     // Mostly mismatched (that's the trick), sometimes the same to keep you honest.
     ink = env.rand() < 0.2 ? word : (word + 1 + Math.floor(env.rand() * 3)) % 4
+    left = limit()
   }
   next()
 
@@ -37,6 +41,16 @@ export const colores: Factory = env => {
       shake = Math.max(0, shake - dt * 4)
       if (!started) return
       t -= dt
+      left -= dt
+      if (left <= 0) {
+        good = false
+        score = Math.max(0, score - 1)
+        flash = 1
+        shake = 1
+        env.score(score)
+        env.sfx.tone(150, 200, 'sawtooth', 0.06)
+        next()
+      }
       if (t <= 0) env.end(Math.max(0, score))
     },
     down(x, y) {
@@ -79,6 +93,13 @@ export const colores: Factory = env => {
       g.fill()
       g.stroke()
       if (started) {
+        // Per-word fuse under the card.
+        g.fillStyle = 'rgba(255,255,255,0.15)'
+        rrect(g, 60, 386, W - 120, 10, 5)
+        g.fill()
+        g.fillStyle = left < 0.6 ? '#ff2d55' : '#ffd35c'
+        rrect(g, 60, 386, (W - 120) * Math.max(0, left / limit()), 10, 5)
+        g.fill()
         g.font = `900 ${COLORS[word].name.length > 5 ? 52 : 66}px Sora, system-ui, sans-serif`
         g.textAlign = 'center'
         g.textBaseline = 'middle'

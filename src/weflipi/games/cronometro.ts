@@ -4,7 +4,8 @@ import { H, W, rrect, text, type Factory } from '../engine'
 
 const ROUNDS = 3
 const TARGET = 10_000
-const VISIBLE = 3_000
+/** How long the digits stay visible, per round: less help each time. */
+const VISIBLE = [3_000, 2_000, 1_000]
 
 export const cronometro: Factory = env => {
   type Phase = 'ready' | 'running' | 'shown'
@@ -70,7 +71,7 @@ export const cronometro: Factory = env => {
       g.beginPath()
       g.arc(cx, cy - r + 36, 7, 0, Math.PI * 2)
       g.fill()
-      const hidden = phase === 'running' && elapsed > VISIBLE
+      const hidden = phase === 'running' && elapsed > VISIBLE[Math.min(errors.length, VISIBLE.length - 1)]
       const shownMs = phase === 'shown' ? last : elapsed
       if (!hidden) {
         const a = (shownMs / TARGET) * Math.PI * 2 - Math.PI / 2

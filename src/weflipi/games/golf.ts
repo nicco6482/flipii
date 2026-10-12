@@ -9,7 +9,9 @@ const MAX_PULL = 170
 const MAX_SPEED = 1000
 
 type Rect = { x: number; y: number; w: number; h: number }
-type Hole = { tee: [number, number]; cup: [number, number]; walls: Rect[]; par: number }
+/** A bar sliding left and right between x0 and x1 (each hole's is faster than the last). */
+type Mover = { y: number; w: number; h: number; x0: number; x1: number; speed: number }
+type Hole = { tee: [number, number]; cup: [number, number]; walls: Rect[]; movers: Mover[]; par: number }
 
 const BORDER: Rect[] = [
   { x: 0, y: 0, w: W, h: 24 },
@@ -19,7 +21,7 @@ const BORDER: Rect[] = [
 ]
 
 export const HOLES: Hole[] = [
-  { tee: [200, 610], cup: [200, 120], par: 2, walls: [{ x: 110, y: 350, w: 180, h: 22 }] },
+  { tee: [200, 610], cup: [200, 120], par: 2, walls: [{ x: 110, y: 350, w: 180, h: 22 }], movers: [{ y: 220, w: 120, h: 18, x0: 24, x1: 256, speed: 1.3 }] },
   {
     tee: [80, 620],
     cup: [320, 100],
@@ -28,6 +30,7 @@ export const HOLES: Hole[] = [
       { x: 24, y: 430, w: 250, h: 22 },
       { x: 126, y: 250, w: 250, h: 22 },
     ],
+    movers: [{ y: 160, w: 100, h: 18, x0: 24, x1: 276, speed: 1.8 }],
   },
   {
     tee: [200, 625],
@@ -40,6 +43,7 @@ export const HOLES: Hole[] = [
       { x: 90, y: 500, w: 40, h: 40 },
       { x: 270, y: 500, w: 40, h: 40 },
     ],
+    movers: [{ y: 290, w: 90, h: 18, x0: 24, x1: 286, speed: 2.4 }],
   },
 ]
 
@@ -80,8 +84,12 @@ export const golf: Factory = env => {
     vx = vy = 0
   }
 
+  let clock = 0
+  const moverRect = (m: Mover): Rect => ({ x: m.x0 + ((Math.sin(clock * m.speed) + 1) / 2) * (m.x1 - m.x0), y: m.y, w: m.w, h: m.h })
+  const walls = () => [...h().walls, ...h().movers.map(moverRect)]
+
   const hitWalls = () => {
-    for (const r of [...BORDER, ...h().walls]) {
+    for (const r of [...BORDER, ...walls()]) {
       const cx = Math.max(r.x, Math.min(bx, r.x + r.w))
       const cy = Math.max(r.y, Math.min(by, r.y + r.h))
       const dx = bx - cx
@@ -110,6 +118,7 @@ export const golf: Factory = env => {
     bg: '#1f6b34',
     update(dt) {
       bannerT = Math.max(0, bannerT - dt)
+      clock += dt
       if (done) return
       if (sinking >= 0) {
         sinking += dt
@@ -194,7 +203,7 @@ export const golf: Factory = env => {
       }
       g.fillStyle = '#8d5a2b'
       for (const r of BORDER) g.fillRect(r.x, r.y, r.w, r.h)
-      for (const r of h().walls) {
+      for (const r of walls()) {
         g.fillStyle = 'rgba(0,0,0,0.25)'
         rrect(g, r.x + 4, r.y + 5, r.w, r.h, 6)
         g.fill()

@@ -16,7 +16,7 @@ export const toques: Factory = env => {
   let dead = false
   let deadT = 0
   let pop = 0
-  const gravity = () => 1300 + Math.min(900, kicks * 18)
+  const gravity = () => 1350 + Math.min(1500, kicks * 32)
 
   return {
     bg: '#3a9a3e',

@@ -3,7 +3,7 @@
 import { H, W, rrect, text, type Factory } from '../engine'
 
 const DICE = 5
-const SPEEDS = [0.16, 0.12, 0.095, 0.078, 0.065] // seconds per face, per die
+const SPEEDS = [0.13, 0.1, 0.08, 0.064, 0.052] // seconds per face, per die
 
 const PIPS: Record<number, [number, number][]> = {
   1: [[0, 0]],

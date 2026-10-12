@@ -35,6 +35,8 @@ export const bolos: Factory = env => {
   let rolling = false
   let gutter = false
   let simT = 0
+  // Oil on the lane: a sideways pull on the ball that grows every frame (same for everyone today).
+  let drift = 0
   let dragging = false
   const trail: { x: number; y: number; t: number }[] = []
   let banner = ''
@@ -141,6 +143,7 @@ export const bolos: Factory = env => {
       const steps = 4
       for (let s = 0; s < steps; s += 1) {
         const h = dt / steps
+        if (!gutter) ball.vx += drift * h
         ball.x += ball.vx * h
         ball.y += ball.vy * h
         if (!gutter && (ball.x - BALL_R < LANE_L || ball.x + BALL_R > LANE_R)) {
@@ -199,6 +202,7 @@ export const bolos: Factory = env => {
       ball.vx = Math.sin(ang) * sp
       ball.vy = -Math.cos(ang) * sp
       rolling = true
+      drift = (env.rand() < 0.5 ? -1 : 1) * (60 + frame * 45 + env.rand() * 40)
       simT = 0
       env.sfx.noise(300, 0.04)
     },
@@ -291,6 +295,7 @@ export const bolos: Factory = env => {
         if (scores[i]) text(g, scores[i], x + 23, 30, 15, scores[i] === 'X' ? '#7ef9ff' : '#fff7e8', 'center', 800)
       }
       text(g, String(total), W - 48, 30, 24, '#ffd35c')
+      if (rolling && Math.abs(drift) > 0) text(g, drift > 0 ? 'Efecto →' : '← Efecto', W / 2, 74, 16, '#7ef9ff', 'center', 800)
       if (bannerT > 0) text(g, banner, W / 2, H / 2 - 20, 42, banner.startsWith('¡S') ? '#7ef9ff' : '#fff7e8')
       else if (!rolling && wait < 0 && frame === 0 && roll === 0) {
         text(g, 'Arrastra la bola para colocarla', W / 2, H / 2 + 40, 18, '#fff7e8', 'center', 800)
