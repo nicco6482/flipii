@@ -41,10 +41,12 @@ export const reflejos: Factory = env => {
           phase = 'decoy'
           decoyT = 0.45
           env.sfx.tone(440, 90, 'square', 0.05)
+          env.fx.vibrate(8)
         } else if (timer <= 0) {
           phase = 'go'
           goAt = performance.now()
           env.sfx.tone(880, 120, 'square', 0.07)
+          env.fx.vibrate(12)
         }
       } else if (phase === 'early' || phase === 'shown') {
         timer -= dt
@@ -82,7 +84,10 @@ export const reflejos: Factory = env => {
     },
     draw(g) {
       const colors: Record<Phase, string> = { intro: '#2a2552', wait: '#e0244e', decoy: '#3d7bff', go: '#2bd47d', early: '#ff7a45', shown: '#3d3673' }
-      g.fillStyle = colors[phase]
+      const bg = g.createRadialGradient(W / 2, H / 2 - 80, 30, W / 2, H / 2 - 80, 420)
+      bg.addColorStop(0, colors[phase])
+      bg.addColorStop(1, '#101126')
+      g.fillStyle = bg
       g.fillRect(0, 0, W, H)
       const r = 120 + Math.sin(pulse * 4) * 6
       g.fillStyle = 'rgba(255,255,255,0.12)'

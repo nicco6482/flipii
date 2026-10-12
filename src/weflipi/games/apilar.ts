@@ -51,6 +51,7 @@ export const apilar: Factory = env => {
       if (over) return
       if (!started) {
         started = true
+        env.fx.vibrate(8)
         return
       }
       const prev = tower[tower.length - 1]
@@ -97,7 +98,11 @@ export const apilar: Factory = env => {
       g.save()
       g.translate(0, cam)
       const drawBlock = (b: Block, y: number) => {
-        g.fillStyle = `hsl(${b.hue}, 75%, 58%)`
+        const block = g.createLinearGradient(b.x, y, b.x + b.w, y + BLOCK_H)
+        block.addColorStop(0, `hsl(${b.hue}, 85%, 76%)`)
+        block.addColorStop(0.22, `hsl(${b.hue}, 75%, 58%)`)
+        block.addColorStop(1, `hsl(${b.hue}, 65%, 30%)`)
+        g.fillStyle = block
         g.fillRect(b.x, y, b.w, BLOCK_H)
         g.fillStyle = `hsl(${b.hue}, 80%, 72%)`
         g.fillRect(b.x, y, b.w, 7)

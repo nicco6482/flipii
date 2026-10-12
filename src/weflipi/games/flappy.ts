@@ -1,6 +1,6 @@
 // Flappy: tap to flap through the gaps. The course comes from the daily seed, so everybody flies
 // the same pipes today. Score = pipes passed.
-import { H, W, text, type Factory } from '../engine'
+import { H, W, sphere, text, type Factory } from '../engine'
 
 const GROUND = H - 70
 const BIRD_X = 110
@@ -70,6 +70,7 @@ export const flappy: Factory = env => {
           env.score(score)
           env.sfx.tone(880, 70, 'square', 0.05)
           env.fx.burst(BIRD_X, y, '#ffffff', 6, 140)
+          env.fx.vibrate(8)
         }
         const inX = BIRD_X + R > p.x + 3 && BIRD_X - R < p.x + PIPE_W - 3
         if (inX && (y - R < p.gap - p.size / 2 || y + R > p.gap + p.size / 2)) die()
@@ -82,6 +83,7 @@ export const flappy: Factory = env => {
       started = true
       vy = -470
       env.sfx.tone(520, 60, 'triangle', 0.05, 200)
+      env.fx.vibrate(8)
     },
     draw(g) {
       const sky = g.createLinearGradient(0, 0, 0, H)
@@ -99,7 +101,12 @@ export const flappy: Factory = env => {
       for (const p of pipes) {
         const top = p.gap - p.size / 2
         const bottom = p.gap + p.size / 2
-        g.fillStyle = '#3fbf4f'
+        const pipe = g.createLinearGradient(p.x, 0, p.x + PIPE_W, 0)
+        pipe.addColorStop(0, '#247f35')
+        pipe.addColorStop(0.28, '#71e36c')
+        pipe.addColorStop(0.55, '#3fbf4f')
+        pipe.addColorStop(1, '#195b2b')
+        g.fillStyle = pipe
         g.fillRect(p.x, -10, PIPE_W, top + 10)
         g.fillRect(p.x, bottom, PIPE_W, GROUND - bottom)
         g.fillStyle = '#2f9a3d'
@@ -131,13 +138,8 @@ export const flappy: Factory = env => {
       g.save()
       g.translate(BIRD_X, y)
       g.rotate(Math.max(-0.5, Math.min(1.2, vy / 600)))
-      g.fillStyle = '#ffd35c'
       g.strokeStyle = '#1b1838'
-      g.lineWidth = 3
-      g.beginPath()
-      g.arc(0, 0, R + 2, 0, Math.PI * 2)
-      g.fill()
-      g.stroke()
+      sphere(g, 0, 0, R + 2, '#ffd35c')
       g.fillStyle = '#ffb020'
       g.beginPath()
       g.ellipse(-6, 4, 9, 6, Math.sin(performance.now() / 70) * 0.5, 0, Math.PI * 2)
