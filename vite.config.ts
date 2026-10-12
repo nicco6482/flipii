@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       target: 'es2022', assetsInlineLimit: 0, chunkSizeWarningLimit: 4600, sourcemap: false,
-      rollupOptions: { input: { main: 'index.html', helix: 'helix.html' } },
+      rollupOptions: { input: { main: 'index.html', helix: 'helix.html', descargar: 'descargar.html' } },
     },
     test: { environment: 'node', include: ['tests/**/*.test.{ts,mjs}'] },
   }
