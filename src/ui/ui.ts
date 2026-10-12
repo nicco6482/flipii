@@ -68,13 +68,13 @@ export class UI {
       <button class="btn btn-primary btn-big" data-action="daily" data-primary><span data-i18n="title.daily"></span><small data-el="dailyNote"></small></button>
       <div class="menu-row">
         <button class="btn btn-small" data-action="practice"><span data-i18n="title.practice"></span></button>
-        <button class="btn btn-small" data-action="board"><span data-i18n="title.board"></span></button>
+        <button class="btn btn-small" data-action="hub"><span data-i18n="title.hub"></span></button>
         <button class="btn btn-small" data-action="settings"><span data-i18n="title.settings"></span></button>
       </div>
     </div>
     <div class="title-stats" data-el="titleStats"></div>
   </div>
-  <aside class="title-top" data-el="titleTop"></aside>
+  <aside class="title-top is-hidden" data-el="titleTop"></aside>
   <div class="title-press" data-el="press"><span data-i18n="title.pressStart"></span></div>
   <div class="bottom-bar">
     <div class="prompts">
@@ -131,7 +131,7 @@ export class UI {
     <div class="menu menu-row results-actions-2">
       <button class="btn btn-small" data-action="share"><span data-i18n="results.share"></span></button>
       <button class="btn btn-small" data-action="copy"><span data-i18n="results.copy"></span></button>
-      <button class="btn btn-small" data-action="board"><span data-i18n="results.board"></span></button>
+      <button class="btn btn-small" data-action="hub"><span data-i18n="title.hub"></span></button>
       <button class="btn btn-small" data-action="title"><span data-i18n="results.title"></span></button>
     </div>
     <div class="toast" data-el="toast"></div>

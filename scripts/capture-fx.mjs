@@ -11,7 +11,7 @@ const p = await (await b.newContext({ viewport: { width: 1280, height: 800 }, lo
 const errs = []
 p.on('pageerror', e => errs.push(String(e)))
 p.on('console', m => m.type() === 'error' && errs.push(m.text()))
-await p.goto(url)
+await p.goto(url + 'helix.html')
 await p.waitForSelector('[data-screen="title"].is-active')
 await p.waitForTimeout(800)
 await p.evaluate(() => {

@@ -111,5 +111,6 @@
   "controls.drag": "Arrastrar",
   "touch.hint": "Mantén ◀ ▶ o arrastra de lado para girar",
   "challenge.label": "Reto",
-  "title.pressStartTouch": "Arrastra la torre o toca Torre del día para empezar"
+  "title.pressStartTouch": "Arrastra la torre o toca Torre del día para empezar",
+  "title.hub": "← weflipi"
 }

@@ -1,5 +1,5 @@
 import './styles/main.css'
-import { STAGE_FLOORS, TOTAL_FLOORS, boardDay } from '../server/helix-rules.mjs'
+import { STAGE_FLOORS, TOTAL_FLOORS } from '../server/helix-rules.mjs'
 import { Audio } from './engine/audio'
 import { I18n, resolveLocale } from './engine/i18n'
 import { Input } from './engine/input'
@@ -13,6 +13,8 @@ import { THEMES } from './game/theme'
 import { Leaderboard, cleanName, type BoardData, type Receipt } from './online/leaderboard'
 import { challengeUrl, copyText, drawCard, readChallenge } from './online/share'
 import { AUTHOR, UI } from './ui/ui'
+import { gameOfDay, today as weflipiToday } from '../server/weflipi-games.mjs'
+import { errorText, savedPlayer, submitScore } from './weflipi/api'
 
 async function boot(): Promise<void> {
   const save = new SaveStore()
@@ -37,9 +39,8 @@ async function boot(): Promise<void> {
   if (!save.data.playerName) save.update({ playerName: `${i18n.locale === 'es' ? 'Jugador' : 'Player'}${Math.floor(1000 + Math.random() * 9000)}` })
 
   const renderer = new Renderer(canvas, save.data.quality)
-  let day = boardDay()
+  let day = weflipiToday()
   let lastKind: RunKind = 'daily'
-  let runId: Promise<string | null> = Promise.resolve(null)
   let lastRun: RunResult | null = null
   let lastReceipt: Receipt | null = null
   let lastWasBest = false
@@ -72,20 +73,6 @@ async function boot(): Promise<void> {
     ui.setTitle({ day, best: save.data.best, todayBest: dailyBestToday(), challenge: target() })
   }
 
-  async function refreshTitleTop(retry = true): Promise<void> {
-    try {
-      const data = await lb.board('today', 5)
-      if (lb.serverDay && lb.serverDay !== day) {
-        day = lb.serverDay
-        refreshTitle()
-      }
-      ui.setTitleTop(data, false, lb.playerId)
-    } catch {
-      ui.setTitleTop(null, true, null)
-      if (retry) window.setTimeout(() => ui.screen === 'title' && void refreshTitleTop(false), 4000)
-    }
-  }
-
   function startRun(kind: RunKind): void {
     audio.unlock()
     audio.startMusic()
@@ -97,12 +84,10 @@ async function boot(): Promise<void> {
     if (ui.modal) ui.closeModal()
     game.personalBest = save.data.best
     if (kind === 'daily') {
-      day = lb.serverDay ?? boardDay()
+      day = weflipiToday()
       game.start('daily', dailySeed(day), day)
-      runId = lb.startRun(save.data.playerName, day)
     } else {
       game.start('practice', (Math.random() * 2 ** 32) >>> 0, '')
-      runId = Promise.resolve(null)
     }
     ui.show('hud')
     ui.touchHint(save.data.plays < 2 && document.body.classList.contains('is-touch'))
@@ -113,11 +98,10 @@ async function boot(): Promise<void> {
     window.clearTimeout(resultsTimer)
     if (ui.modal) ui.closeModal()
     ui.clearPopups()
-    day = lb.serverDay ?? boardDay()
+    day = weflipiToday()
     game.toTitle('daily', dailySeed(day), day)
     refreshTitle()
     ui.show('title')
-    void refreshTitleTop()
   }
 
   function onEnd(run: RunResult): void {
@@ -156,33 +140,27 @@ async function boot(): Promise<void> {
       return
     }
     ui.setOnline(`<p class="muted">${t('results.submitting')}</p>`)
-    void submit(run)
+    void reportWeflipi(run)
   }
 
-  async function submit(run: RunResult): Promise<void> {
-    const t = i18n.t.bind(i18n)
-    const id = await runId
-    if (lastRun !== run) return
-    if (!id) {
-      ui.setOnline(`<p class="muted">${t(lb.serverDay && lb.serverDay !== run.seedDay ? 'results.staleDay' : 'results.offline')}</p>`)
+  /** Daily-tower runs count for weflipi groups on the days Helix Drift is the game of the day. */
+  async function reportWeflipi(run: RunResult): Promise<void> {
+    const escHtml = (s: string) => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`)
+    if (gameOfDay(weflipiToday()).id !== 'helix') {
+      ui.setOnline(`<p class="muted">Hoy el juego de weflipi es otro: esta partida no cuenta para tus grupos.</p>`)
       return
     }
-    const res = await lb.submit(id, { score: run.score, durationMs: run.durationMs, floors: run.floors })
-    if (lastRun !== run) return
-    if (!res.ok) {
-      ui.setOnline(`<p class="muted">${t(res.reason === 'rejected' ? 'results.rejected' : res.reason === 'stale' ? 'results.staleDay' : 'results.offline')}</p>`)
+    if (!savedPlayer()) {
+      ui.setOnline(`<p class="muted">Entra en weflipi y pon tu nombre para que tus partidas cuenten en tus grupos.</p>`)
       return
     }
-    lastReceipt = res.receipt
-    const today = res.receipt.today
-    const all = res.receipt.all
-    const parts: string[] = []
-    if (today) {
-      parts.push(`<div class="rank-main"><span>${t('results.rankToday', { rank: `<b>${today.rank}</b>` })}</span><small>${t('results.rankTotal', { total: today.total })}</small></div>`)
-      parts.push(`<div class="rank-pct">${t('results.beat', { pct: `<b>${today.percentile}</b>` })}</div>`)
-    }
-    parts.push(`<div class="rank-all">${t('results.rankAll', { rank: all.rank })} · ${t('results.rankTotal', { total: all.total })}</div>`)
-    ui.setOnline(parts.join(''))
+    const r = await submitScore('helix', run.score)
+    if (lastRun !== run) return
+    ui.setOnline(
+      r.ok
+        ? `<div class="rank-main"><span>weflipi · tu mejor de hoy <b>${r.data.best}</b></span><small>${r.data.plays} partidas</small></div>`
+        : `<p class="muted">${escHtml(errorText(r.error))}</p>`,
+    )
   }
 
   async function openShare(): Promise<void> {
@@ -255,6 +233,7 @@ async function boot(): Promise<void> {
     pause: () => pause(),
     resume: () => resume(),
     board: () => void openBoard('today'),
+    hub: () => (location.href = './'),
     boardToday: () => void openBoard('today'),
     boardAll: () => void openBoard('all'),
     settings: () => ui.openModal('settings'),
@@ -278,8 +257,7 @@ async function boot(): Promise<void> {
       save.update({ locale })
       i18n.set(locale)
       refreshTitle()
-      void refreshTitleTop()
-    },
+      },
     quality: (el: HTMLElement) => {
       save.update({ quality: el.dataset.value as Quality })
       game.setQuality(save.data.quality)

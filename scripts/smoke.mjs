@@ -38,7 +38,7 @@ async function openGame(context) {
     const offlineLeaderboard = response.url().includes('/api/leaderboards/')
     if (response.status() >= 400 && !offlineLeaderboard) errors.push(`HTTP ${response.status()} ${response.url()}`)
   })
-  await page.goto(url)
+  await page.goto(`${url}helix.html`)
   await page.waitForSelector('[data-screen="title"].is-active', { timeout: 30_000 })
   await page.waitForFunction(() => window.__helix?.game)
   return page

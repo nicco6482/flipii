@@ -17,7 +17,7 @@ async function open(opts, locale = 'es-ES', query = '') {
   const page = await context.newPage()
   page.on('console', m => m.type() === 'error' && errors.push(`[${locale}] ${m.text()}`))
   page.on('pageerror', e => errors.push(`[${locale}] ${e}`))
-  await page.goto(url + query)
+  await page.goto(url + 'helix.html' + query)
   await page.waitForSelector('[data-screen="title"].is-active', { timeout: 30000 })
   await page.waitForTimeout(1200)
   return { context, page }
