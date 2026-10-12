@@ -1,5 +1,5 @@
-// Deslizar (like Playus' Swipe Fast): a big arrow appears. Green → swipe that way; red → swipe the
-// OPPOSITE way. Arrow keys work too. 30 seconds; right +1, wrong −1. Same arrows for everyone today.
+// Deslizar: a big arrow appears. Green means swipe that way; red means the opposite.
+// Arrow keys work too. The 30-second pattern is seeded so every daily run is comparable.
 import { H, W, rrect, text, type Factory } from '../engine'
 
 const TIME = 30
@@ -22,6 +22,7 @@ export const deslizar: Factory = env => {
   let sy = 0
   let swiping = false
   let left = 0
+  let pulse = 0
   // Time for each arrow: 1.6 s at first, down to 0.55 s.
   const limit = () => Math.max(0.55, 1.6 - score * 0.045)
 
@@ -35,6 +36,9 @@ export const deslizar: Factory = env => {
   const answer = (d: Dir) => {
     if (!started) {
       started = true
+      pulse = 1
+      env.sfx.tone(460, 90, 'triangle', 0.07, 80)
+      env.fx.vibrate(14)
       return
     }
     good = d === (red ? OPP[dir] : dir)
@@ -44,7 +48,12 @@ export const deslizar: Factory = env => {
     flyDir = d
     env.score(score)
     env.sfx.tone(good ? 640 + Math.min(score, 30) * 10 : 150, good ? 60 : 200, good ? 'triangle' : 'sawtooth', 0.06)
-    if (good) env.fx.burst(W / 2, 360, '#2bd47d', 10, 220)
+    if (good) {
+      pulse = 1
+      env.fx.burst(W / 2, 360, '#2bd47d', 14, 250)
+      env.fx.shake(0.12)
+      env.fx.vibrate(18)
+    }
     else {
       env.fx.shake(0.35)
       env.fx.vibrate(60)
@@ -57,6 +66,7 @@ export const deslizar: Factory = env => {
     update(dt) {
       flash = Math.max(0, flash - dt * 3)
       fly = Math.max(0, fly - dt * 4)
+      pulse = Math.max(0, pulse - dt * 3.6)
       if (!started) return
       t -= dt
       left -= dt
@@ -66,6 +76,7 @@ export const deslizar: Factory = env => {
         flash = 1
         env.score(score)
         env.sfx.tone(150, 200, 'sawtooth', 0.06)
+        env.fx.shake(0.28)
         env.fx.vibrate(60)
         next()
       }
@@ -89,7 +100,11 @@ export const deslizar: Factory = env => {
       if (pressed) answer(k)
     },
     draw(g) {
-      g.fillStyle = '#1b1838'
+      const bg = g.createRadialGradient(W / 2, 340, 30, W / 2, 340, 480)
+      bg.addColorStop(0, red && started ? '#4a1e4b' : '#312866')
+      bg.addColorStop(0.58, '#201b4c')
+      bg.addColorStop(1, '#100d28')
+      g.fillStyle = bg
       g.fillRect(0, 0, W, H)
       if (flash > 0) {
         g.fillStyle = good ? `rgba(43,212,125,${flash * 0.25})` : `rgba(255,45,85,${flash * 0.35})`
@@ -102,6 +117,15 @@ export const deslizar: Factory = env => {
       rrect(g, 30, 40, (W - 60) * Math.max(0, t / TIME), 16, 8)
       g.fill()
       text(g, String(score), W / 2, 110, 52, '#ffd35c')
+      if (started) {
+        g.fillStyle = `rgba(255,255,255,${0.06 + pulse * 0.12})`
+        rrect(g, 44, 212, W - 88, 296, 38)
+        g.fill()
+        g.strokeStyle = 'rgba(255,255,255,0.12)'
+        g.lineWidth = 3
+        rrect(g, 44, 212, W - 88, 296, 38)
+        g.stroke()
+      }
       const arrow = (d: Dir, color: string, ox: number, oy: number, alpha: number) => {
         g.save()
         g.globalAlpha = alpha
@@ -118,7 +142,12 @@ export const deslizar: Factory = env => {
         g.lineTo(-90 + 6, 40 + 8)
         g.closePath()
         g.fill()
-        g.fillStyle = color
+        const material = g.createLinearGradient(-90, -90, 110, 90)
+        material.addColorStop(0, '#fff7e8')
+        material.addColorStop(0.16, color)
+        material.addColorStop(0.72, color)
+        material.addColorStop(1, red ? '#a72045' : '#168d5a')
+        g.fillStyle = material
         g.strokeStyle = '#1b1838'
         g.lineWidth = 7
         g.lineJoin = 'round'
@@ -133,6 +162,18 @@ export const deslizar: Factory = env => {
         g.closePath()
         g.fill()
         g.stroke()
+        g.globalAlpha = alpha * 0.34
+        g.fillStyle = '#ffffff'
+        g.beginPath()
+        g.moveTo(-74, -27)
+        g.lineTo(0, -27)
+        g.lineTo(0, -59)
+        g.lineTo(57, -7)
+        g.lineTo(0, -2)
+        g.lineTo(0, 4)
+        g.lineTo(-74, 4)
+        g.closePath()
+        g.fill()
         g.restore()
       }
       if (fly > 0) {

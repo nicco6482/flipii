@@ -21,6 +21,8 @@ import { deslizar } from '../src/weflipi/games/deslizar'
 import { ladrillos } from '../src/weflipi/games/ladrillos'
 import { toques } from '../src/weflipi/games/toques'
 import { vasos } from '../src/weflipi/games/vasos'
+import { ecos } from '../src/weflipi/games/ecos'
+import { orbita } from '../src/weflipi/games/orbita'
 
 const sfx = { tone: () => undefined, noise: () => undefined }
 
@@ -131,6 +133,20 @@ describe('minigames', () => {
 
   it('vasos ends on the first wrong cup', async () => {
     expectValid('vasos', await play(vasos, (g, f) => f % 20 === 0 && tap(g, W / 2, 400)))
+  })
+
+  it('orbita ends after navigating an asteroid field', async () => {
+    expectValid('orbita', await play(orbita, (g, f) => {
+      if (f === 0) tap(g, W / 2, 520)
+      if (f > 0 && f % 28 === 0) g.key?.(f % 56 ? 'left' : 'right', true)
+    }))
+  })
+
+  it('ecos ends after an input sequence', async () => {
+    expectValid('ecos', await play(ecos, (g, f) => {
+      if (f === 0) tap(g, 110, 350)
+      if (f > 100 && f % 24 === 0) tap(g, f % 48 ? 110 : 280, f % 72 ? 350 : 530)
+    }))
   })
 
   it('ladrillos ends when the ball gets past the paddle', async () => {

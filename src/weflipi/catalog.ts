@@ -22,6 +22,8 @@ import { dardos } from './games/dardos'
 import { flappy } from './games/flappy'
 import { golf } from './games/golf'
 import { reflejos } from './games/reflejos'
+import { orbita } from './games/orbita'
+import { ecos } from './games/ecos'
 
 export type GameInfo = {
   id: GameId
@@ -60,4 +62,6 @@ export const CATALOG: Record<GameId, GameInfo> = {
   hockey: { id: 'hockey', name: 'Hockey', emoji: '🏒', color: '#5b8cff', how: 'Hockey de aire contra la máquina: arrastra tu mazo y marca. Ella va cada vez más rápido. 60 s.', unit: n => `${n} ${n === 1 ? 'gol' : 'goles'}`, factory: hockey },
   futbolin: { id: 'futbolin', name: 'Futbolín', emoji: '🏟️', color: '#34a653', how: 'Futbolín contra la máquina: desliza para mover tus barras amarillas y toca para chutar. 60 s.', unit: n => `${n} ${n === 1 ? 'gol' : 'goles'}`, factory: futbolin },
   billar: { id: 'billar', name: 'Billar', emoji: '🎱', color: '#1fa463', how: 'Mete todas las bolas que puedas en 90 s. Arrastra atrás para apuntar; varias de un tiro suman más.', unit: n => `${n} pts`, factory: billar },
+  orbita: { id: 'orbita', name: 'Órbita', emoji: '☄️', color: '#7ef9ff', how: 'Cambia de carril para esquivar las rocas espaciales. Cada metro cuenta.', unit: n => `${n} m`, factory: orbita },
+  ecos: { id: 'ecos', name: 'Ecos', emoji: '🔊', color: '#ff6584', how: 'Mira cómo se iluminan los bloques y repite la secuencia. Cada pulso suma.', unit: n => plural(n, 'secuencia', 'secuencias'), factory: ecos },
 }

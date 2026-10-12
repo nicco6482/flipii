@@ -14,6 +14,7 @@ describe('weflipi rules', () => {
   it('rotates through every game, one per day, without changing past days', () => {
     // The original eight-game rotation is untouched up to the day the new games joined.
     expect(['2026-10-10', '2026-10-11', '2026-10-12'].map(d => gameOfDay(d).id)).toEqual(['apilar', 'coches', 'dardos'])
+    expect(gameOfDay('2026-10-14').id).toBe('basket')
     const last = ROTATIONS[ROTATIONS.length - 1]
     const seen = new Set<string>()
     for (let i = 0; i < last.ids.length; i += 1) seen.add(gameOfDay(shiftDay(last.from, i)).id)

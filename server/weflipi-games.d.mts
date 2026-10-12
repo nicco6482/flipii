@@ -1,4 +1,4 @@
-export type GameId = 'helix' | 'reflejos' | 'apilar' | 'coches' | 'dardos' | 'flappy' | 'bolos' | 'golf' | 'calculo' | 'dados' | 'toques' | 'colores' | 'cortar' | 'cronometro' | 'deslizar' | 'vasos' | 'ladrillos' | 'basket' | 'penaltis' | 'hockey' | 'futbolin' | 'billar'
+export type GameId = 'helix' | 'reflejos' | 'apilar' | 'coches' | 'dardos' | 'flappy' | 'bolos' | 'golf' | 'calculo' | 'dados' | 'toques' | 'colores' | 'cortar' | 'cronometro' | 'deslizar' | 'vasos' | 'ladrillos' | 'basket' | 'penaltis' | 'hockey' | 'futbolin' | 'billar' | 'orbita' | 'ecos'
 export type GameRule = { id: GameId; dir: 'asc' | 'desc'; min: number; max: number }
 export type DayScore = { id: string; score: number }
 export type Ranked = DayScore & { place: number; points: number }

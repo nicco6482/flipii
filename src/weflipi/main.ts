@@ -45,8 +45,9 @@ type View = {
   selected: string
   global: api.Global | null
   globalError: string
+  gameSearch: string
 }
-const view: View = { tab: tabFromHash(), state: null, error: '', errorDetail: '', group: null, groupError: '', groupTab: 'hoy', selected: '', global: null, globalError: '' }
+const view: View = { tab: tabFromHash(), state: null, error: '', errorDetail: '', group: null, groupError: '', groupTab: 'hoy', selected: '', global: null, globalError: '', gameSearch: '' }
 let deadline = Date.now() + msUntilNextDay()
 let stopGame: (() => void) | null = null
 let welcome = false
@@ -224,6 +225,11 @@ function render(): void {
   </header>
   <main class="page screen-${view.tab}">${screens[view.tab]()}</main>
   <nav class="tabbar">${TABS.map(t => `<button class="${t.id === view.tab ? 'is-on' : ''}" data-action="tab" data-tab="${t.id}"><span>${t.icon}</span><small>${t.label}</small></button>`).join('')}</nav>`
+  const gameSearch = app.querySelector<HTMLInputElement>('[data-el="game-search"]')
+  gameSearch?.addEventListener('input', () => {
+    view.gameSearch = gameSearch.value
+    applyGamesFilter()
+  })
 }
 
 function go(tab: Tab): void {
@@ -466,18 +472,42 @@ function groupSeason(gr: api.Group): string {
 
 // ─── Juegos ─────────────────────────────────────────────────────────────
 
+const searchKey = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+function applyGamesFilter(): void {
+  const query = searchKey(view.gameSearch.trim())
+  const cards = [...app.querySelectorAll<HTMLElement>('[data-el="game-card"]')]
+  let visible = 0
+  for (const card of cards) {
+    const matches = !query || (card.dataset.search ?? '').includes(query)
+    card.hidden = !matches
+    if (matches) visible += 1
+  }
+  const count = app.querySelector<HTMLElement>('[data-el="games-count"]')
+  if (count) count.textContent = `${visible} ${visible === 1 ? 'juego' : 'juegos'}`
+  const empty = app.querySelector<HTMLElement>('[data-el="games-empty"]')
+  if (empty) empty.hidden = visible > 0
+}
+
 function screenJuegos(): string {
   const t = todayGame()
   const list = Object.values(CATALOG).sort((a, b) => (a.id === t ? -1 : b.id === t ? 1 : 0))
+  const query = searchKey(view.gameSearch.trim())
+  const count = list.filter(x => !query || searchKey(`${x.name} ${x.how}`).includes(query)).length
   return `
     <div class="screen-head"><h1>Juegos</h1></div>
-    <p class="muted lead-in">Cada día toca uno. El resto puedes jugarlos cuando quieras para entrenar.</p>
+    <p class="muted lead-in">El reto diario entra en la clasificación. El resto está abierto para entrenar y probar tu próxima especialidad.</p>
+    <div class="games-toolbar">
+      <label class="games-search"><span aria-hidden="true">⌕</span><input data-el="game-search" type="search" value="${esc(view.gameSearch)}" placeholder="Buscar en la colección" aria-label="Buscar juegos" autocomplete="off" /></label>
+      <span class="games-count" data-el="games-count">${count} ${count === 1 ? 'juego' : 'juegos'}</span>
+    </div>
     <div class="games">${list
       .map(
-        x => `<button class="game-card ${x.id === t ? 'is-today' : ''}" style="--accent:${x.color}" data-action="intro" data-game="${x.id}">
-          ${x.id === t ? '<i class="ribbon">HOY</i>' : ''}<span class="big-emoji">${x.emoji}</span><b>${esc(x.name)}</b><small>${esc(x.how)}</small></button>`,
+        x => `<button class="game-card ${x.id === t ? 'is-today' : ''}" style="--accent:${x.color}" data-el="game-card" data-search="${esc(searchKey(`${x.name} ${x.how}`))}" ${query && !searchKey(`${x.name} ${x.how}`).includes(query) ? 'hidden' : ''} data-action="intro" data-game="${x.id}">
+          ${x.id === t ? '<i class="ribbon">RETO DIARIO</i>' : ''}<span class="big-emoji">${x.emoji}</span><b>${esc(x.name)}</b><small>${esc(x.how)}</small><em class="game-mode">${x.id === t ? 'Cuenta hoy' : 'Entrenamiento'}</em></button>`,
       )
-      .join('')}</div>`
+      .join('')}</div>
+    <p class="games-empty muted" data-el="games-empty" ${count ? 'hidden' : ''}>No hay juegos que coincidan. Prueba con otro nombre.</p>`
 }
 
 // ─── Ranking mundial ────────────────────────────────────────────────────

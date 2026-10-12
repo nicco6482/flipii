@@ -1,6 +1,6 @@
-// Vasos (like Playus' Balls & Cups): watch the ball go under a cup, follow the shuffle, tap the cup.
-// Each round adds swaps and speed. One mistake ends it. Score = rounds won. Same shuffles for all.
-import { H, W, text, type Factory } from '../engine'
+// Vasos: watch the ball go under a cup, follow the shuffle, then tap the cup.
+// Each round adds swaps and speed. One mistake ends the run; score is rounds won.
+import { H, W, sphere, text, type Factory } from '../engine'
 
 const CUPS = 3
 const SLOT_X = [W / 2 - 120, W / 2, W / 2 + 120]
@@ -22,6 +22,7 @@ export const vasos: Factory = env => {
   let phaseT = 0
   let picked = -1
   let lost = false
+  let pickPulse = 0
 
   const startRound = () => {
     round += 1
@@ -75,7 +76,12 @@ export const vasos: Factory = env => {
           env.sfx.tone(260 + swapI * 8, 30, 'square', 0.03)
           swapI += 1
           swapT = 0
-          if (swapI >= swaps.length) phase = 'pick'
+          if (swapI >= swaps.length) {
+            phase = 'pick'
+            pickPulse = 1
+            env.sfx.tone(560, 90, 'triangle', 0.055, 70)
+            env.fx.vibrate(12)
+          }
         }
       } else if (phase === 'reveal') {
         lift = Math.min(1, phaseT * 4)
@@ -84,9 +90,12 @@ export const vasos: Factory = env => {
           else startRound()
         }
       }
+      pickPulse = Math.max(0, pickPulse - dt * 1.6)
     },
     down(x) {
       if (phase === 'intro') {
+        env.sfx.tone(430, 100, 'triangle', 0.065, 80)
+        env.fx.vibrate(16)
         startRound()
         return
       }
@@ -100,6 +109,7 @@ export const vasos: Factory = env => {
         env.score(score)
         env.sfx.tone(784, 160, 'triangle', 0.08)
         env.fx.burst(cupX(best), CUP_Y - 40, '#2bd47d', 24, 300)
+        env.fx.shake(0.15)
         env.fx.vibrate(30)
       } else {
         env.sfx.tone(180, 300, 'sawtooth', 0.06)
@@ -115,31 +125,42 @@ export const vasos: Factory = env => {
       bg.addColorStop(1, '#2e1347')
       g.fillStyle = bg
       g.fillRect(0, 0, W, H)
-      // Table.
-      g.fillStyle = '#7a4a28'
+      // Table edge and recessed playing surface.
+      const table = g.createLinearGradient(0, CUP_Y + 58, 0, H)
+      table.addColorStop(0, '#b87743')
+      table.addColorStop(0.08, '#8b4d27')
+      table.addColorStop(1, '#3c1e25')
+      g.fillStyle = table
       g.fillRect(0, CUP_Y + 70, W, H)
       g.fillStyle = '#9b6236'
       g.fillRect(0, CUP_Y + 70, W, 14)
+      g.strokeStyle = 'rgba(255,220,171,0.14)'
+      g.lineWidth = 2
+      for (let y = CUP_Y + 116; y < H; y += 42) {
+        g.beginPath()
+        g.moveTo(0, y)
+        g.lineTo(W, y + 24)
+        g.stroke()
+      }
       // Ball (visible when the right cup lifts).
       const showBall = phase === 'show' || phase === 'reveal' || phase === 'intro'
       if (showBall) {
         const bx = phase === 'intro' ? SLOT_X[1] : cupX(ballCup)
-        g.fillStyle = '#ff2d55'
-        g.strokeStyle = '#1b1838'
-        g.lineWidth = 4
-        g.beginPath()
-        g.arc(bx, CUP_Y + 48, 20, 0, Math.PI * 2)
-        g.fill()
-        g.stroke()
-        g.fillStyle = 'rgba(255,255,255,0.6)'
-        g.beginPath()
-        g.arc(bx - 6, CUP_Y + 41, 6, 0, Math.PI * 2)
-        g.fill()
+        sphere(g, bx, CUP_Y + 48, 20, '#ff2d55')
       }
       for (let c = 0; c < CUPS; c += 1) {
         const up = (phase === 'show' && c === ballCup) || (phase === 'reveal' && (c === picked || c === ballCup)) ? lift * 90 : phase === 'intro' ? 0 : 0
         const x = cupX(c)
         const y = CUP_Y - up + cupYOffset(c)
+        if (phase === 'pick') {
+          const glow = g.createRadialGradient(x, CUP_Y + 45, 8, x, CUP_Y + 45, 78 + pickPulse * 16)
+          glow.addColorStop(0, `rgba(255,211,92,${0.13 + pickPulse * 0.2})`)
+          glow.addColorStop(1, 'rgba(255,211,92,0)')
+          g.fillStyle = glow
+          g.beginPath()
+          g.arc(x, CUP_Y + 45, 78 + pickPulse * 16, 0, Math.PI * 2)
+          g.fill()
+        }
         g.fillStyle = 'rgba(0,0,0,0.3)'
         g.beginPath()
         g.ellipse(x, CUP_Y + 72, 52, 10, 0, 0, Math.PI * 2)
