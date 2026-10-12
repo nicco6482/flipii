@@ -68,7 +68,10 @@ export const colores: Factory = env => {
         if (!good) shake = 1
         env.score(score)
         env.sfx.tone(good ? 700 : 150, good ? 70 : 200, good ? 'triangle' : 'sawtooth', 0.06)
-        if (good) env.fx.burst(r.x + BTN.w / 2, r.y + BTN.h / 2, COLORS[i].hex, 12, 220)
+        if (good) {
+          env.fx.burst(r.x + BTN.w / 2, r.y + BTN.h / 2, COLORS[i].hex, 12, 220)
+          env.fx.vibrate(10)
+        }
         else {
           env.fx.shake(0.35)
           env.fx.vibrate(60)
@@ -120,7 +123,11 @@ export const colores: Factory = env => {
         g.fillStyle = 'rgba(0,0,0,0.35)'
         rrect(g, r.x + 4, r.y + 7, BTN.w, BTN.h, 22)
         g.fill()
-        g.fillStyle = COLORS[i].hex
+        const button = g.createLinearGradient(r.x, r.y, r.x, r.y + BTN.h)
+        button.addColorStop(0, '#ffffff')
+        button.addColorStop(0.14, COLORS[i].hex)
+        button.addColorStop(1, '#1b1838')
+        g.fillStyle = button
         g.strokeStyle = '#1b1838'
         g.lineWidth = 4
         rrect(g, r.x, r.y, BTN.w, BTN.h, 22)

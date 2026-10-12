@@ -130,6 +130,7 @@ export const cortar: Factory = env => {
           if (!th.bomb) {
             misses += 1
             env.sfx.tone(220, 150, 'square', 0.04)
+            env.fx.vibrate(18)
             if (misses >= 3) over = true
           }
         }
@@ -198,6 +199,8 @@ export const cortar: Factory = env => {
       if (trail.length > 1) {
         g.strokeStyle = '#fff7e8'
         g.lineCap = 'round'
+        g.shadowColor = '#7ef9ff'
+        g.shadowBlur = 12
         for (let i = 1; i < trail.length; i += 1) {
           g.lineWidth = 2 + (i / trail.length) * 9
           g.beginPath()
@@ -205,6 +208,7 @@ export const cortar: Factory = env => {
           g.lineTo(trail[i].x, trail[i].y)
           g.stroke()
         }
+        g.shadowBlur = 0
       }
       if (boom > 0) {
         g.fillStyle = `rgba(255,255,255,${boom})`

@@ -84,6 +84,7 @@ export const calculo: Factory = env => {
           flashGood = true
           env.sfx.tone(600 + Math.min(streak, 10) * 40, 80, 'triangle', 0.07)
           env.fx.burst(r.x + BTN.w / 2, r.y + BTN.h / 2, '#2bd47d', 12, 220)
+          env.fx.vibrate(10)
         } else {
           score = Math.max(0, score - 1)
           streak = 0
@@ -136,7 +137,11 @@ export const calculo: Factory = env => {
         g.fillStyle = 'rgba(0,0,0,0.35)'
         rrect(g, r.x + 4, r.y + 7, BTN.w, BTN.h, 20)
         g.fill()
-        g.fillStyle = colors[i]
+        const button = g.createLinearGradient(r.x, r.y, r.x, r.y + BTN.h)
+        button.addColorStop(0, '#ffffff')
+        button.addColorStop(0.12, colors[i])
+        button.addColorStop(1, '#1b1838')
+        g.fillStyle = button
         g.strokeStyle = '#1b1838'
         g.lineWidth = 4
         rrect(g, r.x, r.y, BTN.w, BTN.h, 20)

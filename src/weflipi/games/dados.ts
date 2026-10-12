@@ -21,7 +21,11 @@ function die(g: CanvasRenderingContext2D, cx: number, cy: number, size: number, 
   g.fillStyle = 'rgba(0,0,0,0.35)'
   rrect(g, -size / 2 + 5, -size / 2 + 8, size, size, size * 0.18)
   g.fill()
-  g.fillStyle = glow ? '#ffd35c' : '#fff7e8'
+  const faceMat = g.createLinearGradient(-size / 2, -size / 2, size / 2, size / 2)
+  faceMat.addColorStop(0, '#ffffff')
+  faceMat.addColorStop(0.2, glow ? '#ffd35c' : '#fff7e8')
+  faceMat.addColorStop(1, glow ? '#b86d3a' : '#aeb7c9')
+  g.fillStyle = faceMat
   g.strokeStyle = '#1b1838'
   g.lineWidth = size * 0.06
   rrect(g, -size / 2, -size / 2, size, size, size * 0.18)
@@ -68,6 +72,7 @@ export const dados: Factory = env => {
       if (doneT >= 0) return
       if (!started) {
         started = true
+        env.fx.vibrate(8)
         return
       }
       results.push(face)
