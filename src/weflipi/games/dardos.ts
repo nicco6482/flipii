@@ -1,6 +1,6 @@
 // Dardos: nine darts on a real dartboard. Hold to aim (the sight floats above your finger and
 // wobbles like a shaky hand), release to throw. Score = total points (max 540).
-import { H, W, text, type Factory } from '../engine'
+import { H, W, sphere, text, type Factory } from '../engine'
 
 const DARTS = 9
 const CX = W / 2
@@ -96,6 +96,7 @@ export const dardos: Factory = env => {
       const a = aim()
       flight = { x: a.x, y: a.y, t: 0 }
       env.sfx.tone(700, 80, 'sine', 0.04, -300)
+      env.fx.vibrate(10)
     },
     draw(g) {
       g.fillStyle = '#14231a'
@@ -103,7 +104,11 @@ export const dardos: Factory = env => {
       g.fillStyle = '#1d3326'
       for (let i = 0; i < 12; i += 1) g.fillRect(0, i * 60, W, 30)
       // Board.
-      g.fillStyle = '#1b1838'
+      const rim = g.createRadialGradient(CX - 42, CY - 46, 10, CX, CY, RING.doubleOut + 30)
+      rim.addColorStop(0, '#55617c')
+      rim.addColorStop(0.35, '#252d49')
+      rim.addColorStop(1, '#0a0d1b')
+      g.fillStyle = rim
       g.beginPath()
       g.arc(CX, CY, RING.doubleOut + 26, 0, Math.PI * 2)
       g.fill()
@@ -136,13 +141,7 @@ export const dardos: Factory = env => {
       // Darts on the board (current round of three stays visible).
       const round = hits.slice(Math.floor(Math.max(0, thrown - 1) / 3) * 3)
       for (const h of round) {
-        g.fillStyle = '#ffd35c'
-        g.strokeStyle = '#1b1838'
-        g.lineWidth = 2
-        g.beginPath()
-        g.arc(h.x, h.y, 5, 0, Math.PI * 2)
-        g.fill()
-        g.stroke()
+        sphere(g, h.x, h.y, 5, '#ffd35c')
         g.strokeStyle = '#7ef9ff'
         g.lineWidth = 3
         g.beginPath()
