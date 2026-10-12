@@ -5,7 +5,7 @@ import qrcode from 'qrcode-generator'
 import { gameOfDay, today } from '../../server/weflipi-games.mjs'
 import { CATALOG } from './catalog'
 import { startCover } from './cover'
-import { APK_URL, apkStepsHtml, canPrompt, isInstalled, onInstallChange, platform, promptInstall, registerServiceWorker, stepsHtml } from './install'
+import { APK_URL, apkStepsHtml, canPrompt, iosGuideHtml, isInstalled, onInstallChange, platform, promptInstall, registerServiceWorker, stepsHtml } from './install'
 
 const app = document.getElementById('app')!
 const canvas = document.createElement('canvas')
@@ -32,7 +32,9 @@ function render(): void {
     ? `<a class="btn primary big" href="/">▶ Abrir weflipi</a>`
     : p === 'android'
       ? `<a class="btn primary big pulse" href="${APK_URL}" download="weflipi.apk" data-apk>📲 Descargar gratis</a><small class="apk-note">App para Android · archivo APK · gratis</small>`
-      : `<button class="btn primary big pulse" data-install>📲 ${p === 'ios' ? 'Instalar gratis' : 'Descargar gratis'}</button>`
+      : p === 'ios'
+        ? `<a class="btn primary big pulse" href="#guia">📲 Añadir a mi iPhone</a><small class="apk-note">Gratis · 3 toques · sin App Store</small>`
+        : `<button class="btn primary big pulse" data-install>📲 Descargar gratis</button>`
   const steps = showSteps === 'apk' ? apkStepsHtml() : stepsHtml()
   app.innerHTML = `
   <main class="page welcome download">
@@ -53,6 +55,11 @@ function render(): void {
       ${installed ? '' : `<a class="link center" href="/">o juega ahora en el navegador →</a>`}
     </section>
     ${
+      p === 'ios' && !installed
+        ? `<section class="card ios-card" id="guia"><div class="ig-title"><img src="/icons/apple-touch-icon.png" alt="" width="84" height="84" /><h2>weflipi en tu iPhone</h2><p class="muted">Apple no deja descargar apps fuera de la App Store, pero puedes tener weflipi en tu pantalla de inicio en 3 toques. Se abre a pantalla completa, directo al juego.</p></div>${iosGuideHtml()}</section>`
+        : ''
+    }
+    ${
       p === 'desktop'
         ? `<section class="card qr-card"><div class="qr">${qrSvg(`${location.origin}/descargar`)}</div><div><h2>¿En el móvil?</h2><p class="muted">Escanea el código con la cámara y te llevará a esta misma página para instalarla.</p></div></section>`
         : ''
@@ -64,7 +71,8 @@ function render(): void {
     </section>
     <div class="shots">${['hoy', 'grupos', 'juegos'].map(s => `<img src="/screenshots/${s}.webp" alt="" loading="lazy" />`).join('')}</div>
     <footer>Creado por nicco6482</footer>
-  </main>`
+  </main>
+  ${p === 'ios' && !installed ? '<div class="safari-pointer" aria-hidden="true"><span>Compartir</span><b>⬇</b></div>' : ''}`
 }
 
 app.addEventListener('click', async e => {
