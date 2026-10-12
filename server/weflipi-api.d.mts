@@ -10,3 +10,5 @@ export declare function handle(store: Store | null, req: ApiRequest, now?: numbe
 export declare function nodeHandler(store: Store | null, req: unknown, res: unknown): Promise<void>
 export declare function upstashCredentials(env?: Record<string, string | undefined>): { url: string; token: string } | null
 export declare function databaseEnvNames(env?: Record<string, string | undefined>): string[]
+export declare function redisStore(url: string): Store
+export declare function redisUrl(env?: Record<string, string | undefined>): string | null

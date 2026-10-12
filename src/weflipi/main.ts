@@ -16,8 +16,8 @@ const coverGames = Object.values(CATALOG)
 const cover = startCover(coverCanvas, coverGames, Math.max(0, coverGames.findIndex(x => x.id === gameOfDay(today()).id)), () => app.querySelector('.hero-space')?.getBoundingClientRect() ?? null)
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`)
 
-type View = { state: api.State | null; error: string; group: api.Group | null; groupError: string; selected: string }
-const view: View = { state: null, error: '', group: null, groupError: '', selected: '' }
+type View = { state: api.State | null; error: string; errorDetail: string; group: api.Group | null; groupError: string; selected: string }
+const view: View = { state: null, error: '', errorDetail: '', group: null, groupError: '', selected: '' }
 let deadline = Date.now() + msUntilNextDay()
 let stopGame: (() => void) | null = null
 
@@ -132,7 +132,9 @@ function renderHome(): void {
     ? `<div class="card notice">${
         view.error === 'no_database'
           ? '<b>Los grupos aún no están activos.</b> Falta conectar la base de datos (Upstash Redis) en Vercel. Mientras tanto puedes jugar igual.'
-          : `<b>Sin conexión con el servidor.</b> Puedes jugar igual; tus puntuaciones se guardan en este móvil.`
+          : view.error === 'offline'
+            ? `<b>Sin conexión con el servidor.</b> Puedes jugar igual; tus puntuaciones se guardan en este móvil.`
+            : `<b>${esc(api.errorText(view.error))}</b> Puedes jugar igual mientras tanto.${view.errorDetail ? `<br /><small>Detalle: ${esc(view.errorDetail)}</small>` : ''}`
       }</div>`
     : ''
   app.innerHTML = `
@@ -248,6 +250,7 @@ async function refresh(): Promise<void> {
   if (r.ok) {
     view.state = r.data
     view.error = ''
+    view.errorDetail = ''
     deadline = Date.now() + r.data.msLeft
     if (!r.data.me && !api.pendingName()) {
       // The stored identity was rejected (e.g. database reset): ask for a name again.
@@ -256,6 +259,7 @@ async function refresh(): Promise<void> {
     }
   } else {
     view.error = r.error
+    view.errorDetail = r.detail ?? ''
     view.state = null
   }
   const invite = new URLSearchParams(location.search).get('unirse')

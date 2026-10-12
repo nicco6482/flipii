@@ -20,7 +20,7 @@ export type Group = {
   lastSeason: { from: string; table: SeasonRow[] }
 }
 export type ScoreResult = { day: string; game: GameId; score: number; best: number; plays: number }
-export type Result<T> = { ok: true; data: T } | { ok: false; error: string }
+export type Result<T> = { ok: true; data: T } | { ok: false; error: string; detail?: string }
 
 const KEY = 'weflipi.player'
 type Saved = { id: string; token: string; name: string }
@@ -65,7 +65,7 @@ async function call<T>(method: 'GET' | 'POST', action: string, body?: object, qu
     const data = await res.json().catch(() => ({ error: 'offline' }))
     if (!res.ok) {
       if (res.status === 401) savePlayer(null)
-      return { ok: false, error: data.error ?? 'offline' }
+      return { ok: false, error: data.error ?? 'offline', detail: typeof data.detail === 'string' ? data.detail : undefined }
     }
     return { ok: true, data }
   } catch {
@@ -124,6 +124,7 @@ export function localBest(day: string, game: GameId, score: number | null, bette
 export const ERRORS: Record<string, string> = {
   offline: 'No hay conexión con el servidor.',
   no_database: 'El servidor aún no tiene base de datos conectada.',
+  database_error: 'La base de datos no responde bien.',
   bad_name: 'Ese nombre no vale.',
   bad_code: 'Ese código no es válido (son 6 letras o números).',
   no_group: 'No existe ningún grupo con ese código.',

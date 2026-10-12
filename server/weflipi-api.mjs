@@ -1,5 +1,6 @@
 // weflipi API: guest players, friend groups with invite codes, daily best scores and weekly seasons.
-// Storage is Redis (Upstash REST in production, an in-memory stand-in for local dev and tests).
+// Storage is Redis: Upstash over REST, any other Redis over TCP (REDIS_URL), or an in-memory
+// stand-in for local dev and tests.
 // `handle` is framework-free so the Vercel function and the Vite dev middleware share it.
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { gameOfDay, msUntilNextDay, rankDay, seasonDays, seasonTable, shiftDay, today, validScore } from './weflipi-games.mjs'
@@ -19,14 +20,42 @@ export function upstashStore(url, token) {
       const res = await fetch(`${url.replace(/\/$/, '')}/pipeline`, {
         method: 'POST',
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-        body: JSON.stringify(commands),
+        body: JSON.stringify(commands.map(cmd => cmd.map(String))),
       })
-      if (!res.ok) throw Object.assign(new Error(`store ${res.status}`), { status: 503 })
+      if (!res.ok) throw Object.assign(new Error(`upstash HTTP ${res.status}`), { status: 503, store: true })
       const out = await res.json()
       return out.map(r => {
-        if (r.error) throw Object.assign(new Error(r.error), { status: 503 })
+        if (r.error) throw Object.assign(new Error(r.error), { status: 503, store: true })
         return r.result
       })
+    },
+  }
+}
+
+/** Any Redis server over TCP (e.g. Redis Cloud from the Vercel Marketplace). One connection per instance. */
+export function redisStore(url) {
+  let client = null
+  const connect = async () => {
+    if (client?.isReady) return client
+    const { createClient } = await import('redis')
+    const c = createClient({ url, socket: { connectTimeout: 5000, reconnectStrategy: false } })
+    c.on('error', () => undefined)
+    try {
+      await c.connect()
+    } catch (error) {
+      throw Object.assign(new Error(`redis connect: ${error.message}`), { status: 503, store: true })
+    }
+    client = c
+    return c
+  }
+  return {
+    async exec(commands) {
+      const c = await connect()
+      try {
+        return await Promise.all(commands.map(cmd => c.sendCommand(cmd.map(String))))
+      } catch (error) {
+        throw Object.assign(new Error(`redis: ${error.message}`), { status: 503, store: true })
+      }
     },
   }
 }
@@ -131,9 +160,19 @@ export function upstashCredentials(env = process.env) {
   return null
 }
 
+/** A redis:// or rediss:// URL for a non-Upstash server, from REDIS_URL / KV_URL (any prefix). */
+export function redisUrl(env = process.env) {
+  for (const key of Object.keys(env).sort((a, b) => a.length - b.length)) {
+    if (/(^|_)(KV_URL|REDIS_URL)$/.test(key) && /^rediss?:\/\//.test(env[key] ?? '')) return env[key]
+  }
+  return null
+}
+
 export function storeFromEnv(env = process.env) {
   const creds = upstashCredentials(env)
-  return creds ? upstashStore(creds.url, creds.token) : null
+  if (creds) return upstashStore(creds.url, creds.token)
+  const url = redisUrl(env)
+  return url ? redisStore(url) : null
 }
 
 /** Names (never values) of env vars that look database-related, to debug a missing connection. */
@@ -335,6 +374,8 @@ export async function handle(store, req, now = Date.now()) {
   } catch (error) {
     const status = error.status ?? 500
     if (status >= 500) console.error('weflipi api', error)
+    // Database failures say why (no secrets in these messages) so a bad connection is easy to fix.
+    if (error.store) return { status: 503, body: { error: 'database_error', detail: String(error.message).slice(0, 200) } }
     return { status, body: { error: error.code ?? (status >= 500 ? 'server_error' : 'bad_request') } }
   }
 }
