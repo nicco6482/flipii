@@ -20,3 +20,6 @@ export declare function validScore(gameId: string, score: number): boolean
 export declare const PLACE_POINTS: number[]
 export declare function rankDay(gameId: string, scores: DayScore[]): Ranked[]
 export declare function seasonTable(days: { day: string; scores: DayScore[] }[]): SeasonRow[]
+export declare const AVATARS: string[]
+export declare const COLORS: string[]
+export declare function defaultLook(id: string): { avatar: string; color: string }

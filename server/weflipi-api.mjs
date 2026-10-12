@@ -3,7 +3,7 @@
 // stand-in for local dev and tests.
 // `handle` is framework-free so the Vercel function and the Vite dev middleware share it.
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
-import { gameOfDay, msUntilNextDay, rankDay, seasonDays, seasonTable, shiftDay, today, validScore } from './weflipi-games.mjs'
+import { AVATARS, COLORS, defaultLook, gameOfDay, msUntilNextDay, rankDay, seasonDays, seasonTable, shiftDay, today, validScore } from './weflipi-games.mjs'
 
 export const MAX_GROUPS_PER_PLAYER = 10
 export const MAX_MEMBERS = 50
@@ -113,6 +113,22 @@ export function memoryStore() {
       }
       return changed
     },
+    ZCARD: k => data.get(k)?.size ?? 0,
+    ZRANGE: (k, start, stop, ...flags) => {
+      const rev = flags.includes('REV')
+      const sorted = [...(data.get(k) ?? new Map())].sort((x, y) => (rev ? y[1] - x[1] : x[1] - y[1]) || (rev ? (y[0] > x[0] ? 1 : -1) : x[0] > y[0] ? 1 : -1))
+      const end = Number(stop) < 0 ? sorted.length + Number(stop) : Number(stop)
+      const slice = sorted.slice(Number(start), end + 1)
+      return flags.includes('WITHSCORES') ? slice.flatMap(([m, sc]) => [m, String(sc)]) : slice.map(([m]) => m)
+    },
+    ZRANK: (k, m) => {
+      const r = ops.ZRANGE(k, 0, -1).indexOf(m)
+      return r < 0 ? null : r
+    },
+    ZREVRANK: (k, m) => {
+      const r = ops.ZRANGE(k, 0, -1, 'REV').indexOf(m)
+      return r < 0 ? null : r
+    },
     ZSCORE: (k, m) => (data.get(k)?.has(m) ? String(data.get(k).get(m)) : null),
     ZMSCORE: (k, ...ms) => ms.map(m => (data.get(k)?.has(m) ? String(data.get(k).get(m)) : null)),
     EXPIRE: () => 1,
@@ -209,15 +225,21 @@ function newCode() {
 async function identity(store, auth, required = true) {
   const m = /^Bearer ([0-9a-f-]{36})\.([0-9a-f]{48})$/.exec(auth ?? '')
   if (!m) return required ? fail(401, 'unauthorized') : null
-  const [tok, name] = await store.exec([['HGET', `wf:p:${m[1]}`, 'tok'], ['HGET', `wf:p:${m[1]}`, 'name']])
+  const [[tok, name, avatar, color]] = await store.exec([['HMGET', `wf:p:${m[1]}`, 'tok', 'name', 'avatar', 'color']])
   if (!tok || tok !== sha(m[2])) return required ? fail(401, 'unauthorized') : null
-  return { id: m[1], name }
+  return { id: m[1], ...look(m[1], name, avatar, color) }
 }
 
-async function names(store, ids) {
+/** Public face of a player: name, avatar and colour (defaults derived from the id). */
+function look(id, name, avatar, color) {
+  const d = defaultLook(id)
+  return { name: name ?? '?', avatar: AVATARS.includes(avatar) ? avatar : d.avatar, color: COLORS.includes(color) ? color : d.color }
+}
+
+async function people(store, ids) {
   if (!ids.length) return {}
-  const out = await store.exec(ids.map(id => ['HGET', `wf:p:${id}`, 'name']))
-  return Object.fromEntries(ids.map((id, i) => [id, out[i] ?? '?']))
+  const out = await store.exec(ids.map(id => ['HMGET', `wf:p:${id}`, 'name', 'avatar', 'color']))
+  return Object.fromEntries(ids.map((id, i) => [id, look(id, ...(out[i] ?? []))]))
 }
 
 async function dayScores(store, days, members) {
@@ -234,11 +256,19 @@ async function state(store, auth, now) {
   const day = today(now)
   const base = { day, game: gameOfDay(day).id, msLeft: msUntilNextDay(now) }
   const me = await identity(store, auth, false)
-  if (!me) return { ...base, me: null, groups: [], best: null, plays: 0 }
-  const [codes, best, plays] = await store.exec([['SMEMBERS', `wf:p:${me.id}:g`], ['ZSCORE', `wf:d:${day}`, me.id], ['HGET', `wf:d:${day}:n`, me.id]])
+  if (!me) return { ...base, me: null, groups: [], best: null, plays: 0, stats: null }
+  const [codes, best, plays, [lastDay, streak, bestStreak, total]] = await store.exec([
+    ['SMEMBERS', `wf:p:${me.id}:g`],
+    ['ZSCORE', `wf:d:${day}`, me.id],
+    ['HGET', `wf:d:${day}:n`, me.id],
+    ['HMGET', `wf:p:${me.id}`, 'lastDay', 'streak', 'bestStreak', 'total'],
+  ])
+  // A streak survives until the end of the day after the last day played.
+  const alive = lastDay === day || lastDay === shiftDay(day, -1)
+  const stats = { streak: alive ? Number(streak ?? 0) : 0, bestStreak: Number(bestStreak ?? 0), total: Number(total ?? 0), playedToday: lastDay === day }
   const info = codes.length ? await store.exec(codes.flatMap(c => [['HGET', `wf:g:${c}`, 'name'], ['SCARD', `wf:g:${c}:m`]])) : []
   const groups = codes.map((code, i) => ({ code, name: info[i * 2] ?? code, members: Number(info[i * 2 + 1]) })).sort((a, b) => a.name.localeCompare(b.name))
-  return { ...base, me, groups, best: num(best), plays: Number(plays ?? 0) }
+  return { ...base, me, groups, best: num(best), plays: Number(plays ?? 0), stats }
 }
 
 async function register(store, body, ip) {
@@ -250,14 +280,28 @@ async function register(store, body, ip) {
   const id = randomUUID()
   const token = randomBytes(24).toString('hex')
   await store.exec([['HSET', `wf:p:${id}`, 'name', name, 'tok', sha(token), 'created', Date.now()]])
-  return { id, token, name }
+  return { id, token, ...look(id, name) }
 }
 
-async function rename(store, me, body) {
-  const name = cleanName(body.name)
-  if (!name) fail(400, 'bad_name')
-  await store.exec([['HSET', `wf:p:${me.id}`, 'name', name]])
-  return { name }
+/** Update any of name / avatar / colour. */
+async function profile(store, me, body) {
+  const fields = []
+  if (body.name !== undefined) {
+    const name = cleanName(body.name)
+    if (!name) fail(400, 'bad_name')
+    fields.push('name', name)
+  }
+  if (body.avatar !== undefined) {
+    if (!AVATARS.includes(body.avatar)) fail(400, 'bad_avatar')
+    fields.push('avatar', body.avatar)
+  }
+  if (body.color !== undefined) {
+    if (!COLORS.includes(body.color)) fail(400, 'bad_color')
+    fields.push('color', body.color)
+  }
+  if (fields.length) await store.exec([['HSET', `wf:p:${me.id}`, ...fields]])
+  const [[name, avatar, color]] = await store.exec([['HMGET', `wf:p:${me.id}`, 'name', 'avatar', 'color']])
+  return look(me.id, name, avatar, color)
 }
 
 async function createGroup(store, me, body) {
@@ -311,14 +355,44 @@ async function submitScore(store, me, body, now) {
   const score = Number(body.score)
   if (!validScore(game.id, score)) fail(400, 'bad_score')
   const key = `wf:d:${day}`
-  const [, plays, best] = await store.exec([
+  const [, plays, best, , , , [lastDay, oldStreak, bestStreak]] = await store.exec([
     ['ZADD', key, game.dir === 'asc' ? 'LT' : 'GT', score, me.id],
     ['HINCRBY', `${key}:n`, me.id, 1],
     ['ZSCORE', key, me.id],
     ['EXPIRE', key, DAY_TTL],
     ['EXPIRE', `${key}:n`, DAY_TTL],
+    ['HINCRBY', `wf:p:${me.id}`, 'total', 1],
+    ['HMGET', `wf:p:${me.id}`, 'lastDay', 'streak', 'bestStreak'],
   ])
-  return { day, game: game.id, score, best: num(best), plays: Number(plays) }
+  let streak = Number(oldStreak ?? 0)
+  if (lastDay !== day) {
+    streak = lastDay === shiftDay(day, -1) ? streak + 1 : 1
+    await store.exec([['HSET', `wf:p:${me.id}`, 'lastDay', day, 'streak', streak, 'bestStreak', Math.max(streak, Number(bestStreak ?? 0))]])
+  }
+  return { day, game: game.id, score, best: num(best), plays: Number(plays), streak }
+}
+
+/** Everyone's best today, worldwide: top `limit` plus the caller's own place. */
+async function global(store, me, now) {
+  const day = today(now)
+  const game = gameOfDay(day)
+  const key = `wf:d:${day}`
+  const asc = game.dir === 'asc'
+  const [top, total, myRank, myScore] = await store.exec([
+    asc ? ['ZRANGE', key, 0, 49, 'WITHSCORES'] : ['ZRANGE', key, 0, 49, 'REV', 'WITHSCORES'],
+    ['ZCARD', key],
+    me ? [asc ? 'ZRANK' : 'ZREVRANK', key, me.id] : ['ZCARD', key],
+    me ? ['ZSCORE', key, me.id] : ['ZCARD', key],
+  ])
+  const rows = []
+  for (let i = 0; i < top.length; i += 2) rows.push({ id: top[i], score: Number(top[i + 1]) })
+  const who = await people(store, rows.map(r => r.id))
+  let place = 0
+  const ranking = rows.map((r, i) => {
+    if (i === 0 || rows[i - 1].score !== r.score) place = i + 1
+    return { ...r, ...who[r.id], place }
+  })
+  return { day, game: game.id, total: Number(total), ranking, me: me && myRank !== null && myRank !== undefined ? { place: Number(myRank) + 1, score: num(myScore) } : null }
 }
 
 async function group(store, me, query, now) {
@@ -335,8 +409,8 @@ async function group(store, me, query, now) {
   const scores = await dayScores(store, all, members)
   const byDay = Object.fromEntries(scores.map(s => [s.day, s.scores]))
   const [plays] = await store.exec([['HMGET', `wf:d:${day}:n`, ...members]])
-  const who = await names(store, members)
-  const named = rows => rows.map(r => ({ ...r, name: who[r.id] }))
+  const who = await people(store, members)
+  const named = rows => rows.map(r => ({ ...r, ...who[r.id] }))
   const game = gameOfDay(day).id
   return {
     code,
@@ -344,10 +418,16 @@ async function group(store, me, query, now) {
     owner,
     day,
     game,
-    members: members.map((id, i) => ({ id, name: who[id], playsToday: Number(plays[i] ?? 0) })),
+    members: members.map((id, i) => ({ id, ...who[id], playsToday: Number(plays[i] ?? 0) })),
     today: named(rankDay(game, byDay[day])),
     yesterday: { day: yesterday, game: gameOfDay(yesterday).id, ranking: named(rankDay(gameOfDay(yesterday).id, byDay[yesterday])).slice(0, 3) },
-    season: { from: week[0], to: shiftDay(week[0], 6), table: named(seasonTable(week.map(d => ({ day: d, scores: byDay[d] })))) },
+    season: {
+      from: week[0],
+      to: shiftDay(week[0], 6),
+      table: named(seasonTable(week.map(d => ({ day: d, scores: byDay[d] })))),
+      // Day by day, for the season chart.
+      days: week.map(d => ({ day: d, game: gameOfDay(d).id, ranking: rankDay(gameOfDay(d).id, byDay[d]).map(({ id, place, points }) => ({ id, place, points })) })),
+    },
     lastSeason: { from: lastWeek[0], table: named(seasonTable(lastWeek.map(d => ({ day: d, scores: byDay[d] })))).slice(0, 3) },
   }
 }
@@ -365,7 +445,8 @@ export async function handle(store, req, now = Date.now()) {
     if (req.method === 'POST' && action === 'register') return { status: 200, body: await register(store, body, req.ip) }
     const me = await identity(store, req.auth)
     if (req.method === 'GET' && action === 'group') return { status: 200, body: await group(store, me, req.query, now) }
-    if (req.method === 'POST' && action === 'rename') return { status: 200, body: await rename(store, me, body) }
+    if (req.method === 'GET' && action === 'global') return { status: 200, body: await global(store, me, now) }
+    if (req.method === 'POST' && (action === 'profile' || action === 'rename')) return { status: 200, body: await profile(store, me, body) }
     if (req.method === 'POST' && action === 'createGroup') return { status: 200, body: await createGroup(store, me, body) }
     if (req.method === 'POST' && action === 'joinGroup') return { status: 200, body: await joinGroup(store, me, body) }
     if (req.method === 'POST' && action === 'leaveGroup') return { status: 200, body: await leaveGroup(store, me, body) }

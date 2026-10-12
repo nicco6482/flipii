@@ -196,12 +196,13 @@ export function startCover(canvas: HTMLCanvasElement, games: CoverGame[], today:
     }
     const box = anchor()
     const cx = w / 2
-    // Sit in the hero gap (so the card scrolls away with it); centre of the screen otherwise.
-    const space = box && box.height > 0 ? box.height : h * 0.45
+    // The card lives in the page's hero gap (and scrolls away with it); screens without one
+    // keep just the starry background.
+    const space = box?.height ?? 0
     const cw = Math.min(190, w * 0.44, (space * 0.68) / 1.28)
     const ch = cw * 1.28
-    const cy = box && box.height > 0 ? box.top + box.height * 0.44 : h * 0.42
-    if (cy + ch > -60) {
+    const cy = box ? box.top + box.height * 0.44 : 0
+    if (box && space > 0 && cy + ch > -60) {
       // The orbit circles the card's feet so the front icons never hide its name.
       const rx = Math.min(w / 2 - 34, cw * 1.25)
       const ry = cw * 0.2
