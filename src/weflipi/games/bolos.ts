@@ -39,6 +39,7 @@ export const bolos: Factory = env => {
   let drift = 0
   let dragging = false
   const trail: { x: number; y: number; t: number }[] = []
+  let ballAngle = 0
   let banner = ''
   let bannerT = 0
   let wait = -1
@@ -151,6 +152,7 @@ export const bolos: Factory = env => {
         if (!gutter) ball.vx += drift * h
         ball.x += ball.vx * h
         ball.y += ball.vy * h
+        ballAngle += Math.hypot(ball.vx, ball.vy) * h / BALL_R
         if (!gutter && (ball.x - BALL_R < LANE_L || ball.x + BALL_R > LANE_R)) {
           gutter = true
           ball.vx = 0
@@ -266,6 +268,28 @@ export const bolos: Factory = env => {
         g.fillStyle = '#e0244e'
         g.fillRect(p.x - p.r + 2, p.y - 2, p.r * 2 - 4, 3)
       }
+      if (dragging && !rolling && trail.length) {
+        const aim = trail[trail.length - 1]
+        const targetX = Math.max(LANE_L + BALL_R, Math.min(LANE_R - BALL_R, aim.x))
+        g.save()
+        g.globalAlpha = 0.75
+        g.strokeStyle = '#7ef9ff'
+        g.lineWidth = 3
+        g.setLineDash([8, 8])
+        g.beginPath()
+        g.moveTo(targetX, BALL_Y - 12)
+        g.lineTo(targetX, HEAD_Y + 30)
+        g.stroke()
+        g.setLineDash([])
+        g.fillStyle = '#7ef9ff'
+        g.beginPath()
+        g.moveTo(targetX, HEAD_Y + 18)
+        g.lineTo(targetX - 8, HEAD_Y + 34)
+        g.lineTo(targetX + 8, HEAD_Y + 34)
+        g.closePath()
+        g.fill()
+        g.restore()
+      }
       if (!(wait >= 0 && roll === 0 && frame > 0 && wait < 0.6)) {
         g.fillStyle = 'rgba(0,0,0,0.3)'
         g.beginPath()
@@ -281,12 +305,16 @@ export const bolos: Factory = env => {
         g.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2)
         g.fill()
         g.stroke()
+        g.save()
+        g.translate(ball.x, ball.y)
+        g.rotate(ballAngle)
         g.fillStyle = '#1b1838'
         for (const [ox, oy] of [[-4, -6], [4, -6], [0, 2]]) {
           g.beginPath()
-          g.arc(ball.x + ox, ball.y + oy, 2.4, 0, Math.PI * 2)
+          g.arc(ox, oy, 2.4, 0, Math.PI * 2)
           g.fill()
         }
+        g.restore()
       }
       // Score sheet.
       g.fillStyle = 'rgba(27,24,56,0.85)'

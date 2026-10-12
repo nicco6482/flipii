@@ -169,7 +169,12 @@ export function run(canvas: HTMLCanvasElement, factory: Factory, env: Omit<Env, 
     vibrate(ms) {
       if (muted()) return
       try {
-        navigator.vibrate?.(ms)
+        if (!navigator.vibrate) return
+        const duration = Math.max(4, Math.min(90, ms))
+        // A short double pulse feels more tactile on phones than one long buzz;
+        // important events get a longer, still bounded final pulse.
+        const pattern = duration <= 14 ? [6, 10, duration] : [Math.round(duration * 0.45), 14, duration]
+        navigator.vibrate(pattern)
       } catch {
         /* unsupported */
       }
@@ -258,6 +263,7 @@ export function run(canvas: HTMLCanvasElement, factory: Factory, env: Omit<Env, 
     e.preventDefault()
     canvas.setPointerCapture?.(e.pointerId)
     if (!ended) {
+      if (e.pointerType === 'touch') fx.vibrate(8)
       const [x, y] = toWorld(e)
       ripples.push({ x, y, life: 1, color: e.pointerType === 'touch' ? '#7ef9ff' : '#ffd35c' })
       if (ripples.length > 12) ripples.shift()
