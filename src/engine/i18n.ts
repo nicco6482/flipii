@@ -1,19 +1,19 @@
 import en from '../i18n/en.json'
-import zh from '../i18n/zh-CN.json'
+import es from '../i18n/es.json'
 import type { Locale } from './save'
 
 export type Dictionary = Record<string, string>
-const DICTIONARIES: Record<Locale, Dictionary> = { en, 'zh-CN': zh }
+const DICTIONARIES: Record<Locale, Dictionary> = { es, en }
 
-/** Map a browser locale list to a supported locale: any zh* → Simplified Chinese, else English. */
+/** Map a browser locale list to a supported locale: any en* → English, else Spanish. */
 export function detectLocale(languages: readonly string[] | undefined): Locale {
   const first = (languages ?? []).find(Boolean) ?? ''
-  return first.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en'
+  return first.toLowerCase().startsWith('en') ? 'en' : 'es'
 }
 
 /** A saved player choice always wins over browser detection. */
 export function resolveLocale(saved: Locale | '', languages: readonly string[] | undefined): Locale {
-  return saved === 'en' || saved === 'zh-CN' ? saved : detectLocale(languages)
+  return saved === 'es' || saved === 'en' ? saved : detectLocale(languages)
 }
 
 export class I18n {
@@ -44,4 +44,4 @@ export class I18n {
   }
 }
 
-export const DICTIONARY_KEYS = { en: Object.keys(en), zh: Object.keys(zh) }
+export const DICTIONARY_KEYS = { es: Object.keys(es), en: Object.keys(en) }

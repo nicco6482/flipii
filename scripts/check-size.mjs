@@ -1,6 +1,6 @@
 // Fails the build when the shipped bundle grows past the budget, so starter projects stay fast
 // to load on mobile networks. JS/CSS are measured gzipped (what the CDN sends); fonts are already
-// compressed woff2 and budgeted separately because CJK coverage is large.
+// compressed woff2 and budgeted separately.
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'

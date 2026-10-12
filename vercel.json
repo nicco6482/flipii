@@ -1,28 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "services": {
-    "app": {
-      "root": ".",
-      "framework": "vite",
-      "installCommand": "pnpm install --frozen-lockfile",
-      "buildCommand": "pnpm build",
-      "outputDirectory": "dist"
-    },
-    "server": {
-      "root": "server",
-      "runtime": "node",
-      "entrypoint": "server.mjs",
-      "installCommand": "npm ci --omit=dev --ignore-scripts"
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": { "service": "server" }
-    },
-    {
-      "source": "/(.*)",
-      "destination": { "service": "app" }
-    }
-  ]
+  "framework": "vite",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm build",
+  "outputDirectory": "dist"
 }

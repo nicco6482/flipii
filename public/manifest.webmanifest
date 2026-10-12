@@ -1,11 +1,11 @@
 {
-  "name": "Helix Drift — Daily Tower Drop",
-  "short_name": "Helix Drift",
-  "description": "One-input 3D helix tower drop with a daily tower and challenge sharing.",
+  "name": "weflipi — minijuegos con amigos",
+  "short_name": "weflipi",
+  "description": "Un minijuego nuevo cada día para competir con tus amigos en grupos. Creado por nicco6482.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "landscape",
+  "orientation": "any",
   "background_color": "#1b1838",
   "theme_color": "#1b1838",
   "icons": [
@@ -15,5 +15,6 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "lang": "es"
 }

@@ -9,6 +9,9 @@ export type PopupKind = 'score' | 'combo' | 'near' | 'smash' | 'stage' | 'danger
 
 export type Handlers = Record<string, (el: HTMLElement) => void>
 
+/** Shown in the title-screen credit and on share cards. */
+export const AUTHOR = 'nicco6482'
+
 const esc = (s: string) => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`)
 
 const ICON_PAUSE = '<svg viewBox="0 0 24 24" width="22" height="22"><rect x="5" y="4" width="5" height="16" rx="1.5" fill="currentColor"/><rect x="14" y="4" width="5" height="16" rx="1.5" fill="currentColor"/></svg>'
@@ -65,13 +68,13 @@ export class UI {
       <button class="btn btn-primary btn-big" data-action="daily" data-primary><span data-i18n="title.daily"></span><small data-el="dailyNote"></small></button>
       <div class="menu-row">
         <button class="btn btn-small" data-action="practice"><span data-i18n="title.practice"></span></button>
-        <button class="btn btn-small" data-action="board"><span data-i18n="title.board"></span></button>
+        <button class="btn btn-small" data-action="hub"><span data-i18n="title.hub"></span></button>
         <button class="btn btn-small" data-action="settings"><span data-i18n="title.settings"></span></button>
       </div>
     </div>
     <div class="title-stats" data-el="titleStats"></div>
   </div>
-  <aside class="title-top" data-el="titleTop"></aside>
+  <aside class="title-top is-hidden" data-el="titleTop"></aside>
   <div class="title-press" data-el="press"><span data-i18n="title.pressStart"></span></div>
   <div class="bottom-bar">
     <div class="prompts">
@@ -79,7 +82,7 @@ export class UI {
       <span><kbd class="wide">Space</kbd> <em data-i18n="controls.start"></em></span>
       <span><kbd>Esc</kbd> <em data-i18n="controls.pause"></em></span>
     </div>
-    <small>© Helix Drift · Remix</small>
+    <small class="credit" data-el="credit"></small>
   </div>
 </section>
 <section class="screen screen-hud" data-screen="hud">
@@ -128,7 +131,7 @@ export class UI {
     <div class="menu menu-row results-actions-2">
       <button class="btn btn-small" data-action="share"><span data-i18n="results.share"></span></button>
       <button class="btn btn-small" data-action="copy"><span data-i18n="results.copy"></span></button>
-      <button class="btn btn-small" data-action="board"><span data-i18n="results.board"></span></button>
+      <button class="btn btn-small" data-action="hub"><span data-i18n="title.hub"></span></button>
       <button class="btn btn-small" data-action="title"><span data-i18n="results.title"></span></button>
     </div>
     <div class="toast" data-el="toast"></div>
@@ -176,7 +179,7 @@ export class UI {
   <div class="modal modal-wide">
     <h2 class="modal-title outlined" data-i18n="settings.title"></h2>
     <div class="settings-grid">
-      <div class="row"><span data-i18n="settings.language"></span><div class="seg"><button data-action="lang" data-value="zh-CN">中文</button><button data-action="lang" data-value="en">English</button></div></div>
+      <div class="row"><span data-i18n="settings.language"></span><div class="seg"><button data-action="lang" data-value="es">Español</button><button data-action="lang" data-value="en">English</button></div></div>
       <div class="row"><span data-i18n="settings.quality"></span><div class="seg"><button data-action="quality" data-value="low" data-i18n="settings.quality.low"></button><button data-action="quality" data-value="medium" data-i18n="settings.quality.medium"></button><button data-action="quality" data-value="high" data-i18n="settings.quality.high"></button></div></div>
       <label class="row"><span data-i18n="settings.music"></span><input type="range" min="0" max="1" step="0.05" data-setting="musicVolume" /></label>
       <label class="row"><span data-i18n="settings.sfx"></span><input type="range" min="0" max="1" step="0.05" data-setting="sfxVolume" /></label>
@@ -195,7 +198,8 @@ export class UI {
 
   translate(): void {
     this.root.querySelectorAll<HTMLElement>('[data-i18n]').forEach(el => (el.textContent = this.i18n.t(el.dataset.i18n!)))
-    document.title = this.i18n.locale === 'zh-CN' ? '螺旋漂移 Helix Drift' : 'Helix Drift 螺旋漂移'
+    this.els.credit.textContent = this.i18n.t('title.credit', { name: AUTHOR })
+    document.title = 'Helix Drift'
     this.syncSettings(this.save.data)
   }
 

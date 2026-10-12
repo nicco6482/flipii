@@ -1,0 +1,77 @@
+import { describe, expect, it } from 'vitest'
+import { validScore, type GameId } from '../server/weflipi-games.mjs'
+import { H, W, mulberry, type Factory, type MiniGame } from '../src/weflipi/engine'
+import { apilar } from '../src/weflipi/games/apilar'
+import { bolos } from '../src/weflipi/games/bolos'
+import { coches } from '../src/weflipi/games/coches'
+import { dardos, dartScore } from '../src/weflipi/games/dardos'
+import { flappy } from '../src/weflipi/games/flappy'
+import { golf } from '../src/weflipi/games/golf'
+
+const sfx = { tone: () => undefined, noise: () => undefined }
+
+/** Drive a game headlessly with `script(game, frame)` until it ends; returns the final score. */
+async function play(factory: Factory, script: (g: MiniGame, frame: number) => void, maxFrames = 20_000): Promise<number | null> {
+  let result: number | null = null
+  const game = factory({ rand: mulberry(42), score: () => undefined, end: s => (result ??= s), sfx })
+  for (let f = 0; f < maxFrames && result === null; f += 1) {
+    script(game, f)
+    game.update(1 / 60)
+    if (f % 600 === 0) await new Promise(r => setTimeout(r, 0))
+  }
+  // Some games finish on a short timer after the last move.
+  for (let i = 0; i < 20 && result === null; i += 1) await new Promise(r => setTimeout(r, 100))
+  return result
+}
+
+const tap = (g: MiniGame, x = W / 2, y = H / 2) => {
+  g.down?.(x, y)
+  g.up?.(x, y)
+}
+
+function expectValid(id: GameId, score: number | null) {
+  expect(score).not.toBeNull()
+  expect(validScore(id, score!), `${id} score ${score}`).toBe(true)
+}
+
+describe('minigames', () => {
+  it('scores darts like a real board', () => {
+    expect(dartScore(W / 2, 285)).toEqual({ points: 50, label: 'DIANA' })
+    expect(dartScore(W / 2, 285 - 103 * (160 / 170))).toEqual({ points: 60, label: 'T20' })
+    expect(dartScore(W / 2, 285 + 166 * (160 / 170))).toEqual({ points: 6, label: 'D3' })
+    expect(dartScore(W / 2, 285 - 60)).toEqual({ points: 20, label: '20' })
+    expect(dartScore(10, 10).points).toBe(0)
+  })
+
+  it('dardos ends after nine darts', async () => {
+    expectValid('dardos', await play(dardos, (g, f) => f % 40 === 0 && tap(g, W / 2, 285 + 90)))
+  })
+
+  it('bolos plays five frames and knocks pins with straight rolls', async () => {
+    const score = await play(bolos, (g, f) => f % 30 === 0 && tap(g, W / 2, H - 90))
+    expectValid('bolos', score)
+    expect(score).toBeGreaterThan(10)
+  })
+
+  it('golf finishes three holes within the stroke cap', async () => {
+    const score = await play(golf, (g, f) => {
+      if (f % 90 !== 0) return
+      g.down?.(200, 400)
+      g.up?.(200 + (f % 180 ? 40 : -40), 560)
+    })
+    expectValid('golf', score)
+  })
+
+  it('coches crashes eventually without input', async () => {
+    const score = await play(coches, (g, f) => f === 0 && g.key?.('left', true))
+    expectValid('coches', score)
+  })
+
+  it('flappy falls after one flap', async () => {
+    expectValid('flappy', await play(flappy, (g, f) => f === 0 && tap(g)))
+  })
+
+  it('apilar ends when a drop misses', async () => {
+    expectValid('apilar', await play(apilar, (g, f) => f % 47 === 0 && tap(g)))
+  })
+})

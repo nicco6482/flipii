@@ -11,13 +11,13 @@ const args = ['--ignore-gpu-blocklist', '--use-gl=angle', '--use-angle=swiftshad
 const browser = await chromium.launch({ args }).catch(() => chromium.launch({ args, channel: 'chrome' }))
 const errors = []
 
-async function open(opts, locale = 'zh-CN', query = '') {
+async function open(opts, locale = 'es-ES', query = '') {
   const context = await browser.newContext({ locale, ...opts })
   await context.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
   const page = await context.newPage()
   page.on('console', m => m.type() === 'error' && errors.push(`[${locale}] ${m.text()}`))
   page.on('pageerror', e => errors.push(`[${locale}] ${e}`))
-  await page.goto(url + query)
+  await page.goto(url + 'helix.html' + query)
   await page.waitForSelector('[data-screen="title"].is-active', { timeout: 30000 })
   await page.waitForTimeout(1200)
   return { context, page }
@@ -49,8 +49,8 @@ const state = page => page.evaluate(() => {
 
 try {
   // ── Desktop, Chinese, with a challenge link ──────────────────────────
-  const { page } = await open({ viewport: { width: 1440, height: 900 } }, 'zh-CN', '?c=420&n=%E5%B0%8F%E6%98%8E&d=2026-09-27')
-  await page.screenshot({ path: `${out}/01-title-zh.png` })
+  const { page } = await open({ viewport: { width: 1440, height: 900 } }, 'es-ES', '?c=420&n=Mar%C3%ADa&d=2026-09-27')
+  await page.screenshot({ path: `${out}/01-title-es.png` })
   // Press Space → start the daily tower.
   await page.keyboard.press('Space')
   await page.waitForTimeout(300)
@@ -91,7 +91,7 @@ try {
   }
   console.log('run 1', JSON.stringify(s), 'first score after', firstScoreMs, 'ms')
   await page.waitForSelector('[data-screen="results"].is-active', { timeout: 5000 })
-  await page.waitForFunction(() => !document.querySelector('.results-online')?.textContent?.includes('上榜…'), null, { timeout: 15000 })
+  await page.waitForFunction(() => !document.querySelector('.results-online')?.textContent?.includes('Enviando…'), null, { timeout: 15000 })
   await page.waitForTimeout(700)
   await page.screenshot({ path: `${out}/04-results.png` })
   console.log('online:', await page.textContent('.results-online'))
@@ -124,7 +124,7 @@ try {
   await page.keyboard.press('Escape')
   await page.waitForTimeout(300)
   // Rename.
-  await page.fill('.results-name input', '测试高手')
+  await page.fill('.results-name input', 'Campeón')
   await page.press('.results-name input', 'Enter')
   await page.waitForTimeout(700)
   // Space restarts instantly.
@@ -155,7 +155,7 @@ try {
   await p2.screenshot({ path: `${out}/12-settings.png` })
 
   // ── Mobile landscape with touch ───────────────────────────────────────
-  const { page: m } = await open({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, 'zh-CN')
+  const { page: m } = await open({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, 'es-ES')
   await m.screenshot({ path: `${out}/13-mobile-title.png` })
   await m.tap('[data-action="daily"]')
   await m.waitForTimeout(600)

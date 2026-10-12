@@ -1,8 +1,9 @@
 {
   "boot.loading": "Assembling the tower…",
   "title.name": "HELIX DRIFT",
-  "title.sub": "螺旋漂移",
+  "title.sub": "SPIRAL DROP",
   "title.tagline": "Spin the tower and drop the bouncing ball through the gaps, all the way down!",
+  "title.credit": "Made by {name}",
   "title.daily": "Daily Tower",
   "title.dailyNote": "{day} · same tower for everyone",
   "title.practice": "Random Practice",
@@ -110,5 +111,6 @@
   "controls.drag": "Drag",
   "touch.hint": "Hold ◀ ▶ or drag sideways to spin",
   "challenge.label": "Challenge",
-  "title.pressStartTouch": "Drag the tower or tap Daily Tower to start"
+  "title.pressStartTouch": "Drag the tower or tap Daily Tower to start",
+  "title.hub": "← weflipi"
 }

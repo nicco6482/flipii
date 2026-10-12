@@ -1,7 +1,6 @@
 /* ─── Fonts (SIL OFL 1.1, notices in public/fonts/*-OFL.txt) ─────────────── */
 @font-face { font-family: 'Sora'; src: url('/fonts/Sora-VF.subset.woff2') format('woff2'); font-weight: 100 800; font-display: swap; }
 @font-face { font-family: 'Figtree'; src: url('/fonts/Figtree-VF.subset.woff2') format('woff2'); font-weight: 300 900; font-display: swap; }
-@font-face { font-family: 'Noto Sans SC'; src: url('/fonts/NotoSansSC-VF.subset.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
 
 :root {
   --ink: #1b1838;
@@ -13,16 +12,12 @@
   --orange: #ff7a45;
   --cyan: #7ef9ff;
   --red: #ff2d55;
-  --display: 'Sora', 'Noto Sans SC', system-ui, sans-serif;
-  --body: 'Figtree', 'Noto Sans SC', system-ui, sans-serif;
+  --display: 'Sora', system-ui, sans-serif;
+  --body: 'Figtree', system-ui, sans-serif;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-l: env(safe-area-inset-left, 0px);
   --safe-r: env(safe-area-inset-right, 0px);
-}
-:lang(zh-CN) {
-  --display: 'Noto Sans SC', 'Sora', system-ui, sans-serif;
-  --body: 'Noto Sans SC', 'Figtree', system-ui, sans-serif;
 }
 * { box-sizing: border-box; }
 html, body {
@@ -102,6 +97,7 @@ kbd.wide { min-width: 3.6em; }
   background: linear-gradient(0deg, rgba(19, 17, 42, 0.8), transparent); font-weight: 700; font-size: 13px;
 }
 .bottom-bar small { opacity: 0.5; font-weight: 500; font-size: 11px; }
+.bottom-bar .credit { opacity: 0.85; font-weight: 800; font-size: 12px; color: var(--gold); white-space: nowrap; }
 .prompts { display: flex; gap: 22px; flex-wrap: wrap; }
 .prompts span { display: inline-flex; align-items: center; gap: 4px; }
 .prompts em { font-style: normal; margin-left: 4px; opacity: 0.85; }
