@@ -1,4 +1,4 @@
-export type GameId = 'helix' | 'reflejos' | 'apilar' | 'coches' | 'dardos' | 'flappy' | 'bolos' | 'golf'
+export type GameId = 'helix' | 'reflejos' | 'apilar' | 'coches' | 'dardos' | 'flappy' | 'bolos' | 'golf' | 'calculo' | 'dados' | 'toques' | 'colores' | 'cortar' | 'cronometro' | 'deslizar' | 'vasos' | 'ladrillos'
 export type GameRule = { id: GameId; dir: 'asc' | 'desc'; min: number; max: number }
 export type DayScore = { id: string; score: number }
 export type Ranked = DayScore & { place: number; points: number }
@@ -6,6 +6,7 @@ export type SeasonRow = { id: string; points: number; wins: number; played: numb
 
 export declare const GAMES: GameRule[]
 export declare const GAME_IDS: GameId[]
+export declare const ROTATIONS: { from: string; ids: GameId[] }[]
 export declare function gameById(id: string): GameRule | null
 export declare const TIME_ZONE: string
 export declare function today(nowMs?: number): string

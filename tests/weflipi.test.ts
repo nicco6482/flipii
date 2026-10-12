@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { handle, memoryStore, redisStore, upstashCredentials, type Store } from '../server/weflipi-api.mjs'
-import { GAMES, gameOfDay, msUntilNextDay, rankDay, seasonDays, seasonTable, today, weekStart } from '../server/weflipi-games.mjs'
+import { GAMES, ROTATIONS, gameOfDay, msUntilNextDay, rankDay, seasonDays, seasonTable, shiftDay, today, weekStart } from '../server/weflipi-games.mjs'
 
 const NOON = Date.parse('2026-10-14T10:00:00Z') // Wednesday, 12:00 in Madrid
 
@@ -11,10 +11,14 @@ describe('weflipi rules', () => {
     expect(msUntilNextDay(NOON)).toBe(12 * 3_600_000)
   })
 
-  it('rotates through every game, one per day', () => {
+  it('rotates through every game, one per day, without changing past days', () => {
+    // The original eight-game rotation is untouched up to the day the new games joined.
+    expect(['2026-10-10', '2026-10-11', '2026-10-12'].map(d => gameOfDay(d).id)).toEqual(['apilar', 'coches', 'dardos'])
+    const last = ROTATIONS[ROTATIONS.length - 1]
     const seen = new Set<string>()
-    for (let i = 0; i < GAMES.length; i += 1) seen.add(gameOfDay(`2026-01-0${i + 1}`).id)
-    expect(seen.size).toBe(GAMES.length)
+    for (let i = 0; i < last.ids.length; i += 1) seen.add(gameOfDay(shiftDay(last.from, i)).id)
+    expect(seen).toEqual(new Set(GAMES.map(g => g.id)))
+    expect(gameOfDay(shiftDay(last.from, last.ids.length)).id).toBe(last.ids[0])
   })
 
   it('runs seasons Monday to Sunday', () => {
