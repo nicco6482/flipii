@@ -125,6 +125,30 @@ export function rrect(g: CanvasRenderingContext2D, x: number, y: number, w: numb
   g.roundRect(x, y, w, h, r)
 }
 
+/** Draw a lightweight 3D-looking sphere for mobile-friendly physics games. */
+export function sphere(g: CanvasRenderingContext2D, x: number, y: number, r: number, base: string, edge = '#1b1838'): void {
+  g.fillStyle = 'rgba(0,0,0,0.28)'
+  g.beginPath()
+  g.ellipse(x + r * 0.22, y + r * 0.34, r * 0.92, r * 0.3, 0, 0, Math.PI * 2)
+  g.fill()
+  const grd = g.createRadialGradient(x - r * 0.38, y - r * 0.45, r * 0.08, x, y, r * 1.08)
+  grd.addColorStop(0, '#ffffff')
+  grd.addColorStop(0.16, base)
+  grd.addColorStop(0.72, base)
+  grd.addColorStop(1, '#111329')
+  g.fillStyle = grd
+  g.strokeStyle = edge
+  g.lineWidth = Math.max(1.5, r * 0.1)
+  g.beginPath()
+  g.arc(x, y, r, 0, Math.PI * 2)
+  g.fill()
+  g.stroke()
+  g.fillStyle = 'rgba(255,255,255,0.48)'
+  g.beginPath()
+  g.ellipse(x - r * 0.34, y - r * 0.42, r * 0.2, r * 0.12, -0.35, 0, Math.PI * 2)
+  g.fill()
+}
+
 export function text(g: CanvasRenderingContext2D, s: string, x: number, y: number, size: number, color = '#fff7e8', align: CanvasTextAlign = 'center', weight = 800): void {
   g.font = `${weight} ${size}px Sora, Figtree, system-ui, sans-serif`
   g.textAlign = align

@@ -1,10 +1,10 @@
 // Apilar: a block slides side to side; tap to drop it on the tower. The overhang is cut off, so
-// the tower narrows unless you land a perfect drop. Score = floors stacked.
+// the tower narrows unless you land a centered drop. Score = floors stacked.
 import { H, W, rrect, text, type Factory } from '../engine'
 
 const BLOCK_H = 34
 const BASE_Y = H - 90
-const PERFECT = 4
+const ALIGN_TOLERANCE = 4
 
 type Block = { x: number; w: number; hue: number }
 type Chip = { x: number; y: number; w: number; vy: number; hue: number; rot: number }
@@ -17,8 +17,8 @@ export const apilar: Factory = env => {
   let started = false
   let over = false
   let overT = 0
-  let perfectFlash = 0
-  let combo = 0
+  let alignFlash = 0
+  let streak = 0
   const chips: Chip[] = []
 
   // Speeds up with every floor: ~190 px/s at the start, 650 px/s from floor ~33.
@@ -28,7 +28,7 @@ export const apilar: Factory = env => {
   return {
     bg: '#14122e',
     update(dt) {
-      perfectFlash = Math.max(0, perfectFlash - dt * 2.5)
+      alignFlash = Math.max(0, alignFlash - dt * 2.5)
       for (const c of chips) {
         c.vy += 1400 * dt
         c.y += c.vy * dt
@@ -55,17 +55,17 @@ export const apilar: Factory = env => {
       }
       const prev = tower[tower.length - 1]
       const y = levelY(tower.length)
-      if (Math.abs(cur.x - prev.x) <= PERFECT) {
+      if (Math.abs(cur.x - prev.x) <= ALIGN_TOLERANCE) {
         cur.x = prev.x
-        combo += 1
-        perfectFlash = 1
-        // Perfect streaks slowly grow the block back.
-        if (combo >= 3) cur.w = Math.min(220, cur.w + 10)
-        env.sfx.tone(520 + combo * 60, 120, 'triangle', 0.08)
+        streak += 1
+        alignFlash = 1
+        // Centered streaks slowly grow the block back.
+        if (streak >= 3) cur.w = Math.min(220, cur.w + 10)
+        env.sfx.tone(520 + streak * 60, 120, 'triangle', 0.08)
         env.fx.burst(cur.x + cur.w / 2, levelY(tower.length) + cam, '#7ef9ff', 16, 260)
         env.fx.vibrate(15)
       } else {
-        combo = 0
+        streak = 0
         const left = Math.max(cur.x, prev.x)
         const right = Math.min(cur.x + cur.w, prev.x + prev.w)
         if (right <= left) {
@@ -80,6 +80,7 @@ export const apilar: Factory = env => {
         if (cur.x + cur.w > right) chips.push({ x: right, y, w: cur.x + cur.w - right, vy: 0, hue: cur.hue, rot: 0 })
         cur = { ...cur, x: left, w: right - left }
         env.sfx.tone(330 + tower.length * 8, 70, 'square', 0.05)
+        env.fx.vibrate(8)
       }
       tower.push(cur)
       env.score(tower.length - 1)
@@ -115,16 +116,15 @@ export const apilar: Factory = env => {
         g.fillRect(-c.w / 2, -BLOCK_H / 2, c.w, BLOCK_H)
         g.restore()
       }
-      if (perfectFlash > 0) {
+      if (alignFlash > 0) {
         const top = tower[tower.length - 1]
-        g.strokeStyle = `rgba(255,255,255,${perfectFlash})`
+        g.strokeStyle = `rgba(255,255,255,${alignFlash})`
         g.lineWidth = 4
-        rrect(g, top.x - 6 * (1 - perfectFlash), levelY(tower.length - 1) - 6 * (1 - perfectFlash), top.w + 12 * (1 - perfectFlash), BLOCK_H + 12 * (1 - perfectFlash), 4)
+        rrect(g, top.x - 6 * (1 - alignFlash), levelY(tower.length - 1) - 6 * (1 - alignFlash), top.w + 12 * (1 - alignFlash), BLOCK_H + 12 * (1 - alignFlash), 4)
         g.stroke()
       }
       g.restore()
       text(g, String(tower.length - 1), W / 2, 90, 64, '#ffd35c')
-      if (perfectFlash > 0.3) text(g, combo >= 3 ? `¡PERFECTO ×${combo}!` : '¡PERFECTO!', W / 2, 150, 26, '#7ef9ff')
       if (!started) {
         text(g, 'Toca para soltar el bloque', W / 2, H / 2 - 120, 22)
         text(g, 'Si lo clavas, no se recorta', W / 2, H / 2 - 88, 17, '#7ef9ff', 'center', 700)

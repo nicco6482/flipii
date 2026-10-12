@@ -1,7 +1,7 @@
 // Penaltis: 10 shots against a goalkeeper who gets sharper every shot. Swipe from the ball towards
 // the goal: the swipe's direction aims, its speed sets the power and a curved swipe bends the shot
 // (real side-spin). Goal = 1 point, top corner ("escuadra") = 2. Posts bounce the ball out.
-import { H, W, rrect, text, type Factory } from '../engine'
+import { H, W, rrect, sphere, text, type Factory } from '../engine'
 
 const SHOTS = 10
 const GOAL = { x: 70, y: 150, w: 260, h: 110 } // goal mouth in the goal plane (screen units)
@@ -83,7 +83,7 @@ export const penaltis: Factory = env => {
       c.t += dt
       // Keeper reads the shot after a delay and dives towards where it will cross.
       if (c.t > sk.delay) {
-        const guess = c.tx + c.curve * 0.25
+        const guess = Math.max(GOAL.x + keeper.w / 2, Math.min(GOAL.x + GOAL.w - keeper.w / 2, c.tx + c.curve * 0.25))
         keeper.targetX = guess
         const dx = keeper.targetX - keeper.x
         const step = Math.sign(dx) * Math.min(Math.abs(dx), sk.speed * dt)
@@ -152,6 +152,7 @@ export const penaltis: Factory = env => {
       current = { x: BALL_START.x, y: BALL_START.y, z: 0, tx, ty, curve, dur: FLIGHT / Math.min(1.4, Math.max(0.7, power)), t: 0, done: false }
       env.sfx.noise(90, 0.06)
       env.sfx.tone(160, 80, 'square', 0.05)
+      env.fx.vibrate(12 + Math.round(power * 10))
     },
     draw(g) {
       // Pitch with stripes and perspective.
@@ -203,6 +204,32 @@ export const penaltis: Factory = env => {
       g.strokeRect(GOAL.x + POST, GOAL.y + POST, GOAL.w * 0.2, GOAL.h * 0.38)
       g.strokeRect(GOAL.x + GOAL.w * 0.8 - POST, GOAL.y + POST, GOAL.w * 0.2, GOAL.h * 0.38)
       g.setLineDash([])
+      if (drag.length) {
+        const a = drag[0]
+        const b = drag[drag.length - 1]
+        const dx = b.x - a.x
+        const dy = b.y - a.y
+        const len = Math.max(1, Math.hypot(dx, dy))
+        const power = Math.min(1, Math.max(0.25, len / 170))
+        const scale = (BALL_START.y - (GOAL.y + GOAL.h * 0.5)) / Math.max(40, -dy)
+        const targetX = BALL_START.x + dx * scale * 0.9
+        g.save()
+        g.globalAlpha = 0.8
+        g.strokeStyle = power > 0.8 ? '#ffd35c' : '#7ef9ff'
+        g.lineWidth = 3
+        g.setLineDash([7, 8])
+        g.beginPath()
+        g.moveTo(BALL_START.x, BALL_START.y)
+        g.quadraticCurveTo((BALL_START.x + targetX) / 2, BALL_START.y - 130 - power * 60, targetX, GOAL.y + GOAL.h * 0.5)
+        g.stroke()
+        g.setLineDash([])
+        g.fillStyle = '#ffd35c'
+        g.beginPath()
+        g.arc(targetX, GOAL.y + GOAL.h * 0.5, 7 + power * 4, 0, Math.PI * 2)
+        g.fill()
+        text(g, power > 0.8 ? 'Potente' : 'Coloca el tiro', W / 2, H - 76, 15, '#fff7e8', 'center', 800)
+        g.restore()
+      }
       // Keeper.
       g.save()
       g.translate(keeper.x, keeper.y)
@@ -238,20 +265,10 @@ export const penaltis: Factory = env => {
       const by = current ? current.y : BALL_START.y
       const s = current ? 1 - current.z * 0.55 : 1
       const r = R * s
-      g.fillStyle = 'rgba(0,0,0,0.25)'
-      g.beginPath()
-      g.ellipse(bx, (current ? BALL_START.y + (GOAL.y + GOAL.h - BALL_START.y) * current.z : BALL_START.y) + r * 0.9, r, r * 0.3, 0, 0, Math.PI * 2)
-      g.fill()
       g.save()
       g.translate(bx, by)
       g.rotate((current?.t ?? 0) * (current ? current.curve / 10 : 0))
-      g.fillStyle = '#fff'
-      g.strokeStyle = '#1b1838'
-      g.lineWidth = 3
-      g.beginPath()
-      g.arc(0, 0, r, 0, Math.PI * 2)
-      g.fill()
-      g.stroke()
+      sphere(g, 0, 0, r, '#f3f7ff')
       g.fillStyle = '#1b1838'
       g.beginPath()
       for (let k = 0; k < 5; k += 1) {

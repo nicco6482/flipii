@@ -16,14 +16,12 @@ export const toques: Factory = env => {
   let dead = false
   let deadT = 0
   let pop = 0
-  let perfectT = 0
   const gravity = () => 1240 + Math.min(980, kicks * 22)
 
   return {
     bg: '#3a9a3e',
     update(dt) {
       pop = Math.max(0, pop - dt * 4)
-      perfectT = Math.max(0, perfectT - dt * 2.6)
       if (dead) {
         deadT += dt
         if (deadT > 0.9) env.end(kicks)
@@ -64,18 +62,15 @@ export const toques: Factory = env => {
       const dy = py - y
       // Generous hit area: the ball plus a finger's width.
       if (Math.hypot(dx, dy) > R + 34) return
-      const perfect = started && vy > 80 && Math.abs(dx) <= R * 0.55
       started = true
       kicks += 1
       env.score(kicks)
-      vy = (perfect ? -960 : -820) - Math.min(perfect ? 180 : 200, kicks * 4)
-      vx = -dx * (perfect ? 6 : 9) + (Math.random() - 0.5) * (perfect ? 28 : 60)
+      vy = -820 - Math.min(200, kicks * 4)
+      vx = -dx * 9 + (Math.random() - 0.5) * 60
       pop = 1
-      perfectT = perfect ? 1 : 0
-      env.sfx.tone((perfect ? 620 : 380) + Math.min(kicks, 30) * 12, perfect ? 100 : 60, perfect ? 'triangle' : 'square', perfect ? 0.08 : 0.06, perfect ? 180 : 0)
-      env.fx.burst(x, y + R * 0.6, perfect ? '#ffd35c' : '#ffffff', perfect ? 14 : 8, perfect ? 270 : 200)
-      if (perfect) env.fx.pop(x, y - R * 1.4, '¡PERFECT!', '#ffd35c')
-      env.fx.vibrate(perfect ? 24 : 10)
+      env.sfx.tone(380 + Math.min(kicks, 30) * 12, 60, 'square', 0.06)
+      env.fx.burst(x, y + R * 0.6, '#ffffff', 8, 200)
+      env.fx.vibrate(10)
     },
     draw(g) {
       const sky = g.createLinearGradient(0, 0, 0, H)
@@ -136,7 +131,6 @@ export const toques: Factory = env => {
       }
       text(g, String(kicks), W / 2, 90, 64, '#ffd35c')
       if (!started) text(g, 'Toca el balón para darle', W / 2, 470, 22)
-      if (perfectT > 0) text(g, '¡PERFECTO!', W / 2, 150, 26, '#ffd35c')
       if (dead) text(g, '¡Al suelo!', W / 2, 220, 40, '#ff5f7e')
     },
   }
