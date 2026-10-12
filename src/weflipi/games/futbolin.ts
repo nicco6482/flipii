@@ -90,13 +90,15 @@ export const futbolin: Factory = env => {
       // A swinging foot fires the ball towards the other goal; hitting it off-centre angles it.
       const dir = r.mine ? -1 : 1
       const off = (ball.x - fx) / (FOOT.w / 2)
-      ball.vy = dir * (950 + Math.random() * 150)
+      const clean = Math.abs(off) < 0.28
+      ball.vy = dir * (clean ? 1120 : 950 + Math.random() * 150)
       ball.vx += off * 380
       ball.spin = off * 6
       r.kick = 0
       env.sfx.tone(140, 60, 'square', 0.08)
       env.fx.shake(0.25)
-      env.fx.vibrate(15)
+      env.fx.vibrate(clean ? 28 : 15)
+      if (clean && r.mine) env.fx.pop(fx, r.y - 28, '¡CENTRADO!', '#ffd35c')
     }
     const sp = Math.hypot(ball.vx, ball.vy)
     if (sp > MAX_BALL) {
