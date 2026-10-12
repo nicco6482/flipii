@@ -3,7 +3,7 @@
 // cushion bounces and rolling friction; the guide shows where the first ball you hit will go.
 // Potted ball = 1 point (+1 per extra ball in the same shot); pot the white and you lose 1.
 // Clear the table and a new rack drops in for a +3 bonus.
-import { H, W, rrect, text, type Factory } from '../engine'
+import { H, W, rrect, sphere, text, type Factory } from '../engine'
 
 const TIME = 90
 const T = { x: 34, y: 70, w: W - 68, h: H - 150 } // playing surface (inside the cushions)
@@ -350,22 +350,8 @@ export const billar: Factory = env => {
       const drawBall = (b: Ball) => {
         const r = b.in ? R * b.sink : R
         if (r <= 0.5) return
-        g.fillStyle = 'rgba(0,0,0,0.3)'
-        g.beginPath()
-        g.arc(b.x + 2, b.y + 3, r, 0, Math.PI * 2)
-        g.fill()
         const color = b.n === 0 ? '#fffdf5' : COLORS[(b.n - 1) % COLORS.length]
-        const grd = g.createRadialGradient(b.x - r * 0.35, b.y - r * 0.4, r * 0.1, b.x, b.y, r)
-        grd.addColorStop(0, '#ffffff')
-        grd.addColorStop(0.35, color)
-        grd.addColorStop(1, color)
-        g.fillStyle = grd
-        g.strokeStyle = 'rgba(0,0,0,0.6)'
-        g.lineWidth = 1.5
-        g.beginPath()
-        g.arc(b.x, b.y, r, 0, Math.PI * 2)
-        g.fill()
-        g.stroke()
+        sphere(g, b.x, b.y, r, color, 'rgba(0,0,0,0.6)')
         if (b.n > 0 && r > 6) {
           g.fillStyle = '#fff'
           g.beginPath()

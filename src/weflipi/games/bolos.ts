@@ -1,6 +1,6 @@
 // Bolos: five frames, two balls each. Drag the ball sideways to line it up and flick it up the
 // lane; pins bounce into each other. Score = pins knocked + 10 per strike + 5 per spare.
-import { H, W, rrect, text, type Factory } from '../engine'
+import { H, W, rrect, sphere, text, type Factory } from '../engine'
 
 const FRAMES = 5
 const LANE_L = 110
@@ -291,20 +291,7 @@ export const bolos: Factory = env => {
         g.restore()
       }
       if (!(wait >= 0 && roll === 0 && frame > 0 && wait < 0.6)) {
-        g.fillStyle = 'rgba(0,0,0,0.3)'
-        g.beginPath()
-        g.arc(ball.x + 4, ball.y + 5, BALL_R, 0, Math.PI * 2)
-        g.fill()
-        const bg = g.createRadialGradient(ball.x - 6, ball.y - 6, 2, ball.x, ball.y, BALL_R)
-        bg.addColorStop(0, '#9b8cff')
-        bg.addColorStop(1, '#4a2fbf')
-        g.fillStyle = bg
-        g.strokeStyle = '#1b1838'
-        g.lineWidth = 3
-        g.beginPath()
-        g.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2)
-        g.fill()
-        g.stroke()
+        sphere(g, ball.x, ball.y, BALL_R, '#4a2fbf')
         g.save()
         g.translate(ball.x, ball.y)
         g.rotate(ballAngle)

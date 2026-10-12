@@ -2,7 +2,7 @@
 // hand, 1 = the hoop plane) under gravity, then bounces off the rim and the backboard for real.
 // Swish = 3 points, any other basket = 2, and three in a row light you up 🔥 for double points.
 // After 15 s the hoop starts sliding, faster and faster. 60 seconds.
-import { H, W, rrect, text, type Factory } from '../engine'
+import { H, W, rrect, sphere, text, type Factory } from '../engine'
 
 const TIME = 60
 const R = 34 // ball radius at your hand
@@ -246,16 +246,9 @@ export const basket: Factory = env => {
         g.save()
         g.translate(b.x, b.y)
         g.rotate(b.spin)
-        const grd = g.createRadialGradient(-r * 0.3, -r * 0.35, r * 0.1, 0, 0, r)
-        grd.addColorStop(0, '#ffb066')
-        grd.addColorStop(1, '#e0601f')
-        g.fillStyle = grd
-        g.strokeStyle = '#1b1838'
-        g.lineWidth = 3
-        g.beginPath()
-        g.arc(0, 0, r, 0, Math.PI * 2)
-        g.fill()
-        g.stroke()
+        sphere(g, 0, 0, r, '#e0601f')
+        g.strokeStyle = 'rgba(27,24,56,0.85)'
+        g.lineWidth = 2
         g.strokeStyle = 'rgba(27,24,56,0.85)'
         g.lineWidth = 2
         g.beginPath()

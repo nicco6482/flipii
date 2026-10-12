@@ -1,6 +1,6 @@
 // Toques (like Playus' Keep Up): keep the ball in the air. Tap it to kick it up; where you hit it
 // sends it left or right. Gravity slowly grows. Score = kicks before it touches the grass.
-import { H, W, text, type Factory } from '../engine'
+import { H, W, sphere, text, type Factory } from '../engine'
 
 const R = 36
 const GROUND = H - 70
@@ -95,13 +95,7 @@ export const toques: Factory = env => {
       g.translate(x, y)
       g.scale(1 + pop * 0.12, 1 - pop * 0.12)
       g.rotate(spin)
-      g.fillStyle = '#fff'
-      g.strokeStyle = '#1b1838'
-      g.lineWidth = 4
-      g.beginPath()
-      g.arc(0, 0, R, 0, Math.PI * 2)
-      g.fill()
-      g.stroke()
+      sphere(g, 0, 0, R, '#f3f7ff')
       g.fillStyle = '#1b1838'
       const patch = (a: number, d: number, s: number) => {
         g.beginPath()
