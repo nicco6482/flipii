@@ -104,7 +104,10 @@ export const golf: Factory = env => {
         if (dot < 0) {
           vx -= 1.8 * dot * nx
           vy -= 1.8 * dot * ny
-          if (Math.abs(dot) > 80) env.sfx.tone(300, 30, 'square', 0.03)
+          if (Math.abs(dot) > 80) {
+            env.sfx.tone(300, 30, 'square', 0.03)
+            env.fx.vibrate(Math.abs(dot) > 260 ? 12 : 6)
+          }
         }
       } else if (d === 0) {
         // Centre inside a wall (tunnelled): put it back where it last rested.
@@ -195,6 +198,7 @@ export const golf: Factory = env => {
       vy = dy * power * MAX_SPEED
       strokes += 1
       env.sfx.tone(180 + power * 300, 60, 'triangle', 0.08)
+      env.fx.vibrate(10 + Math.round(power * 10))
     },
     draw(g) {
       g.fillStyle = '#1f6b34'
@@ -248,6 +252,13 @@ export const golf: Factory = env => {
         g.lineTo(bx + Math.cos(a) * len * 1.1, by + Math.sin(a) * len * 1.1)
         g.stroke()
         g.setLineDash([])
+        g.fillStyle = '#fff7e8'
+        g.globalAlpha = 0.7
+        g.beginPath()
+        g.arc(bx + Math.cos(a) * len * 1.1, by + Math.sin(a) * len * 1.1, 5 + power * 4, 0, Math.PI * 2)
+        g.fill()
+        g.globalAlpha = 1
+        text(g, power > 0.8 ? 'Potente' : power > 0.4 ? 'Media' : 'Suave', W / 2, H - 92, 15, '#fff7e8', 'center', 800)
       }
       const r = sinking >= 0 ? BALL_R * Math.max(0.2, 1 - sinking) : BALL_R
       g.fillStyle = 'rgba(0,0,0,0.3)'
