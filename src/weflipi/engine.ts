@@ -145,8 +145,10 @@ export function run(canvas: HTMLCanvasElement, factory: Factory, env: Omit<Env, 
   let ended = false
   type Particle = { x: number; y: number; vx: number; vy: number; life: number; max: number; color: string; size: number }
   type Pop = { x: number; y: number; label: string; color: string; life: number }
+  type Ripple = { x: number; y: number; life: number; color: string }
   const particles: Particle[] = []
   const pops: Pop[] = []
+  const ripples: Ripple[] = []
   let shakeAmt = 0
   const PALETTE = ['#ffd35c', '#ff5f7e', '#7ef9ff', '#2bd47d', '#a77bff', '#ff9f43']
   const fx: Fx = {
@@ -216,6 +218,8 @@ export function run(canvas: HTMLCanvasElement, factory: Factory, env: Omit<Env, 
     for (let i = particles.length - 1; i >= 0; i -= 1) if (particles[i].life <= 0) particles.splice(i, 1)
     for (const p of pops) p.life -= dt * 0.9
     while (pops.length && pops[0].life <= 0) pops.shift()
+    for (const r of ripples) r.life -= dt * 2.6
+    while (ripples.length && ripples[0].life <= 0) ripples.shift()
     shakeAmt = Math.max(0, shakeAmt - dt * 2.5)
     g.setTransform(1, 0, 0, 1, 0, 0)
     g.fillStyle = game.bg
@@ -227,6 +231,15 @@ export function run(canvas: HTMLCanvasElement, factory: Factory, env: Omit<Env, 
     g.clip()
     if (shakeAmt > 0) g.translate((Math.random() - 0.5) * shakeAmt * 16, (Math.random() - 0.5) * shakeAmt * 16)
     game.draw(g)
+    for (const r of ripples) {
+      const progress = 1 - Math.max(0, r.life)
+      g.globalAlpha = Math.max(0, r.life) * 0.8
+      g.strokeStyle = r.color
+      g.lineWidth = 5 - progress * 3
+      g.beginPath()
+      g.arc(r.x, r.y, 10 + progress * 42, 0, Math.PI * 2)
+      g.stroke()
+    }
     for (const p of particles) {
       g.globalAlpha = Math.max(0, p.life / p.max)
       g.fillStyle = p.color
@@ -244,10 +257,22 @@ export function run(canvas: HTMLCanvasElement, factory: Factory, env: Omit<Env, 
   const onDown = (e: PointerEvent) => {
     e.preventDefault()
     canvas.setPointerCapture?.(e.pointerId)
-    if (!ended) game.down?.(...toWorld(e))
+    if (!ended) {
+      const [x, y] = toWorld(e)
+      ripples.push({ x, y, life: 1, color: e.pointerType === 'touch' ? '#7ef9ff' : '#ffd35c' })
+      if (ripples.length > 12) ripples.shift()
+      game.down?.(x, y)
+    }
   }
   const onMove = (e: PointerEvent) => !ended && game.move?.(...toWorld(e))
-  const onUp = (e: PointerEvent) => !ended && game.up?.(...toWorld(e))
+  const onUp = (e: PointerEvent) => {
+    if (!ended) game.up?.(...toWorld(e))
+    try {
+      if (canvas.hasPointerCapture?.(e.pointerId)) canvas.releasePointerCapture(e.pointerId)
+    } catch {
+      /* Synthetic pointers may not support capture release. */
+    }
+  }
   const keys: Record<string, 'left' | 'right' | 'up' | 'down'> = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down' }
   const onKey = (e: KeyboardEvent) => {
     if (ended || e.repeat) return

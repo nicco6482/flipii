@@ -208,7 +208,10 @@ input:focus { border-color: var(--gold); }
 
 /* ─── Juegos ──────────────────────────────────────────────────────────── */
 .games { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.game-card { position: relative; border: 3px solid var(--ink); border-radius: 22px; padding: 16px 12px 14px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 38%, #24204a), #24204a 70%); box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35); transition: transform 0.1s; }
+.game-card { position: relative; overflow: hidden; border: 3px solid var(--ink); border-radius: 22px; padding: 16px 12px 14px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 38%, #24204a), #24204a 70%); box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35); transition: transform 0.14s ease, filter 0.14s ease, box-shadow 0.14s ease; }
+.game-card::after { content: ''; position: absolute; inset: -40% 55% 40% -35%; background: linear-gradient(120deg, rgba(255,255,255,0.22), transparent 65%); transform: rotate(12deg); pointer-events: none; transition: transform 0.3s ease; }
+.game-card:hover { transform: translateY(-3px); filter: brightness(1.08); box-shadow: 0 9px 0 rgba(0, 0, 0, 0.35), 0 0 28px -12px var(--accent); }
+.game-card:hover::after { transform: translateX(30%) rotate(12deg); }
 .game-card:active { transform: translateY(3px) scale(0.98); }
 .game-card b { font-family: var(--display); font-size: 17px; }
 .game-card small { color: var(--muted); font-weight: 600; font-size: 12px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
@@ -255,7 +258,7 @@ input:focus { border-color: var(--gold); }
 @keyframes float { 50% { transform: translateY(-10px) rotate(4deg); } }
 
 .play { position: fixed; inset: 0; z-index: 10; background: #0d0b22; display: flex; flex-direction: column; }
-.play canvas { flex: 1; width: 100%; min-height: 0; display: block; touch-action: none; }
+.play canvas { flex: 1; width: 100%; min-height: 0; display: block; cursor: crosshair; touch-action: none; }
 .play-bar { display: flex; align-items: center; gap: 10px; padding: calc(8px + env(safe-area-inset-top)) 12px 8px; background: var(--ink); }
 .play-bar b { flex: 1; font-family: var(--display); font-size: 16px; }
 .play-bar b small { color: var(--cyan); font-size: 12px; margin-left: 4px; }
