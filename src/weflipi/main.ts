@@ -6,7 +6,7 @@ import * as api from './api'
 import { CATALOG } from './catalog'
 import { startCover } from './cover'
 import { mulberry, muted, run, setMuted, sfx } from './engine'
-import { canPrompt, isInstalled, onInstallChange, platform, promptInstall, registerServiceWorker, stepsHtml } from './install'
+import { apkStepsHtml, canPrompt, downloadApk, isInstalled, nativeShare, onInstallChange, platform, promptInstall, registerServiceWorker, stepsHtml } from './install'
 
 const AUTHOR = 'nicco6482'
 const TABS = [
@@ -320,22 +320,31 @@ function installBanner(): string {
     <section class="card install-banner">
       <img src="/icons/icon-192.png" alt="" width="52" height="52" />
       <div><b>Instala weflipi</b><small>Tenla en tu pantalla de inicio como una app. Gratis.</small></div>
-      <button class="btn primary small" data-action="install">${canPrompt() ? 'Instalar' : 'Cómo'}</button>
+      <button class="btn primary small" data-action="install">${platform() === 'android' ? 'Descargar' : canPrompt() ? 'Instalar' : 'Cómo'}</button>
       <button class="x" data-action="install-hide" aria-label="Ocultar">✕</button>
     </section>`
 }
 
 async function install(): Promise<void> {
+  const p = platform()
+  if (p === 'android') {
+    downloadApk()
+    installSheet('Descargando weflipi…', 'Cuando termine la descarga:', apkStepsHtml())
+    return
+  }
   if (canPrompt()) {
     if (await promptInstall()) toast('¡weflipi instalada! Búscala en tu pantalla de inicio')
     return
   }
+  installSheet('Instala weflipi', p === 'ios' ? 'En iPhone se instala desde Safari en 3 pasos:' : 'Así se instala:', stepsHtml())
+}
+
+function installSheet(title: string, lead: string, steps: string): void {
   const wrap = document.createElement('div')
   wrap.className = 'sheet-wrap'
-  const p = platform()
   wrap.innerHTML = `<div class="sheet"><span class="grab"></span>
-    <div class="install-head"><img src="/icons/icon-192.png" alt="" width="64" height="64" /><div><h2>Instala weflipi</h2><p class="muted">${p === 'ios' ? 'En iPhone se instala desde Safari en 3 pasos:' : p === 'android' ? 'En Android se instala desde Chrome:' : 'Así se instala:'}</p></div></div>
-    ${stepsHtml()}
+    <div class="install-head"><img src="/icons/icon-192.png" alt="" width="64" height="64" /><div><h2>${esc(title)}</h2><p class="muted">${esc(lead)}</p></div></div>
+    ${steps}
     <button class="btn primary" data-close>Entendido</button></div>`
   document.body.appendChild(wrap)
   const close = () => wrap.remove()
@@ -346,6 +355,7 @@ async function install(): Promise<void> {
 async function shareApp(): Promise<void> {
   const url = DOWNLOAD_URL()
   const msg = '¡Descárgate weflipi! Un minijuego nuevo cada día para picarnos entre amigos 🎮'
+  if (nativeShare(`${msg} ${url}`)) return
   if (navigator.share) {
     try {
       await navigator.share({ title: 'weflipi', text: msg, url })
@@ -513,7 +523,7 @@ function screenPerfil(): string {
       <div class="color-row">${COLORS.map(c => `<button class="swatch ${c === m.color ? 'is-on' : ''}" style="--c:${c}" data-action="color" data-v="${c}" aria-label="Color ${c}"></button>`).join('')}</div>
     </section>
     <section class="card settings">
-      ${isInstalled() ? '' : '<button class="setting" data-action="install"><span>📲 Instalar la app</span><b>Gratis →</b></button>'}
+      ${isInstalled() ? '' : `<button class="setting" data-action="install"><span>📲 ${platform() === 'android' ? 'Descargar la app' : 'Instalar la app'}</span><b>Gratis →</b></button>`}
       <button class="setting" data-action="share-app"><span>🔗 Enlace de descarga</span><b>Compartir →</b></button>
       <button class="setting" data-action="sound"><span>Sonido</span><b>${muted() ? 'Desactivado 🔇' : 'Activado 🔊'}</b></button>
     </section>
@@ -897,6 +907,7 @@ app.addEventListener('click', async e => {
 async function share(code: string, name: string): Promise<void> {
   const url = `${location.origin}${location.pathname}?unirse=${code}`
   const textMsg = `¡Únete a mi grupo «${name}» en weflipi y compite conmigo cada día! Código: ${code}`
+  if (nativeShare(`${textMsg} ${url}`)) return
   if (navigator.share) {
     try {
       await navigator.share({ title: 'weflipi', text: textMsg, url })

@@ -1,0 +1,39 @@
+plugins {
+    id 'com.android.application'
+}
+
+// The APK is a thin native shell around https://flipii.vercel.app, so game updates never need a
+// new APK. CI signs it with the keystore in WEFLIPI_KEYSTORE (see .github/workflows/android.yml).
+android {
+    namespace 'app.weflipi'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'app.weflipi'
+        minSdk 24
+        targetSdk 34
+        versionCode Integer.parseInt(System.getenv('WEFLIPI_VERSION_CODE') ?: '1')
+        versionName '1.0'
+    }
+
+    signingConfigs {
+        release {
+            storeFile file(System.getenv('WEFLIPI_KEYSTORE') ?: 'release.jks')
+            storePassword System.getenv('WEFLIPI_KEYSTORE_PASSWORD')
+            keyAlias 'weflipi'
+            keyPassword System.getenv('WEFLIPI_KEYSTORE_PASSWORD')
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
