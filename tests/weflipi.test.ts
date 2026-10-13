@@ -146,4 +146,54 @@ describe.each(stores)('weflipi api (%s)', (_name, makeStore) => {
     expect((await call(store, 'POST', 'joinGroup', { code: 'ZZZZZZ' }, eve)).body.error).toBe('no_group')
     expect((await call(store, 'GET', 'group', {}, `${ana.split('.')[0]}.${'0'.repeat(48)}`, { code })).status).toBe(401)
   })
+
+  it('runs a reto: same seed for everyone, three tries each, best one counts', async () => {
+    const store = makeStore()
+    const ana = await player(store, 'Ana')
+    const leo = await player(store, 'Leo')
+    expect((await call(store, 'POST', 'retoCreate', { game: 'nope' }, ana)).body.error).toBe('bad_game')
+    const made = await call(store, 'POST', 'retoCreate', { game: 'golf' }, ana)
+    expect(made.status).toBe(200)
+    const { code, seed } = made.body
+    expect(code).toMatch(/^[A-Z2-9]{6}$/)
+    expect(made.body).toMatchObject({ game: 'golf', maxTries: 3, myTries: 0, players: [{ name: 'Ana', score: null }] })
+    // A score needs a started try.
+    expect((await call(store, 'POST', 'retoScore', { code, score: 9 }, leo)).body.error).toBe('no_tries')
+    for (const score of [12, 8]) {
+      expect((await call(store, 'POST', 'retoStart', { code }, leo)).status).toBe(200)
+      await call(store, 'POST', 'retoScore', { code, score }, leo)
+    }
+    await call(store, 'POST', 'retoStart', { code }, ana)
+    const after = await call(store, 'POST', 'retoScore', { code, score: 10 }, ana)
+    // Golf: fewer strokes win; Leo's best (8) beats Ana's 10.
+    expect(after.body.players.map((p: { name: string; score: number; place: number; tries: number }) => [p.name, p.score, p.place, p.tries])).toEqual([
+      ['Leo', 8, 1, 2],
+      ['Ana', 10, 2, 1],
+    ])
+    expect((await call(store, 'GET', 'reto', {}, leo, { code })).body).toMatchObject({ seed, myTries: 2 })
+    await call(store, 'POST', 'retoStart', { code }, leo)
+    expect((await call(store, 'POST', 'retoStart', { code }, leo)).body.error).toBe('no_tries')
+    // One score per try, even after the tries run out.
+    await call(store, 'POST', 'retoScore', { code, score: 20 }, leo)
+    expect((await call(store, 'POST', 'retoScore', { code, score: 3 }, leo)).body.error).toBe('no_tries')
+    expect((await call(store, 'GET', 'retos', {}, leo)).body.retos.map((r: { code: string }) => r.code)).toEqual([code])
+    expect((await call(store, 'GET', 'reto', {}, leo, { code: 'ZZZZZZ' })).body.error).toBe('no_reto')
+  })
+
+  it('swaps the offer and the answer of a live 1 vs 1 between two phones', async () => {
+    const store = makeStore()
+    const ana = await player(store, 'Ana')
+    const leo = await player(store, 'Leo')
+    const eve = await player(store, 'Eve')
+    expect((await call(store, 'POST', 'duelCreate', { game: 'golf', offer: 'x' }, ana)).body.error).toBe('bad_game')
+    expect((await call(store, 'POST', 'duelCreate', { game: 'hockey', offer: 'x'.repeat(20_000) }, ana)).body.error).toBe('bad_sdp')
+    const { code } = (await call(store, 'POST', 'duelCreate', { game: 'hockey', offer: 'OFFER' }, ana)).body
+    expect((await call(store, 'GET', 'duel', {}, ana, { code })).body).toMatchObject({ game: 'hockey', answer: null, host: { name: 'Ana' } })
+    expect((await call(store, 'GET', 'duel', {}, leo, { code })).body).toMatchObject({ game: 'hockey', offer: 'OFFER', taken: false })
+    expect((await call(store, 'POST', 'duelAnswer', { code, answer: 'A' }, ana)).body.error).toBe('own_duel')
+    expect((await call(store, 'POST', 'duelAnswer', { code, answer: 'ANSWER' }, leo)).status).toBe(200)
+    expect((await call(store, 'POST', 'duelAnswer', { code, answer: 'LATE' }, eve)).body.error).toBe('duel_taken')
+    expect((await call(store, 'GET', 'duel', {}, ana, { code })).body.answer).toBe('ANSWER')
+    expect((await call(store, 'GET', 'duel', {}, eve, { code: 'ZZZZZZ' })).body.error).toBe('no_duel')
+  })
 })

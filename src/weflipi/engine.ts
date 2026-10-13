@@ -161,12 +161,16 @@ export function text(g: CanvasRenderingContext2D, s: string, x: number, y: numbe
   g.fillText(s, x, y)
 }
 
-// ─── Runner ─────────────────────────────────────────────────────────────
+// ─── Effects ────────────────────────────────────────────────────────────
 
-/** Mount `factory` on `canvas`. Returns a stop function that removes every listener. */
-export function run(canvas: HTMLCanvasElement, factory: Factory, env: Omit<Env, 'sfx' | 'fx'>): () => void {
-  const g = canvas.getContext('2d')!
-  let ended = false
+/** Particles, touch ripples, screen shake, floating text and vibration, shared by every runner. */
+export function createFx(): {
+  fx: Fx
+  ripple: (x: number, y: number, color: string) => void
+  step: (dt: number) => void
+  shake: (g: CanvasRenderingContext2D) => void
+  draw: (g: CanvasRenderingContext2D) => void
+} {
   type Particle = { x: number; y: number; vx: number; vy: number; life: number; max: number; color: string; size: number }
   type Pop = { x: number; y: number; label: string; color: string; life: number }
   type Ripple = { x: number; y: number; life: number; color: string }
@@ -204,6 +208,62 @@ export function run(canvas: HTMLCanvasElement, factory: Factory, env: Omit<Env, 
       }
     },
   }
+  return {
+    fx,
+    ripple(x, y, color) {
+      ripples.push({ x, y, life: 1, color })
+      if (ripples.length > 12) ripples.shift()
+    },
+    step(dt) {
+      for (const p of particles) {
+        p.vy += 900 * dt
+        p.x += p.vx * dt
+        p.y += p.vy * dt
+        p.life -= dt
+      }
+      for (let i = particles.length - 1; i >= 0; i -= 1) if (particles[i].life <= 0) particles.splice(i, 1)
+      for (const p of pops) p.life -= dt * 0.9
+      while (pops.length && pops[0].life <= 0) pops.shift()
+      for (const r of ripples) r.life -= dt * 2.6
+      while (ripples.length && ripples[0].life <= 0) ripples.shift()
+      shakeAmt = Math.max(0, shakeAmt - dt * 2.5)
+    },
+    shake(g) {
+      if (shakeAmt > 0) g.translate((Math.random() - 0.5) * shakeAmt * 16, (Math.random() - 0.5) * shakeAmt * 16)
+    },
+    draw(g) {
+      for (const r of ripples) {
+        const progress = 1 - Math.max(0, r.life)
+        g.globalAlpha = Math.max(0, r.life) * 0.8
+        g.strokeStyle = r.color
+        g.lineWidth = 5 - progress * 3
+        g.beginPath()
+        g.arc(r.x, r.y, 10 + progress * 42, 0, Math.PI * 2)
+        g.stroke()
+      }
+      for (const p of particles) {
+        g.globalAlpha = Math.max(0, p.life / p.max)
+        g.fillStyle = p.color
+        g.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size)
+      }
+      g.globalAlpha = 1
+      for (const p of pops) {
+        g.globalAlpha = Math.min(1, p.life * 2)
+        text(g, p.label, p.x, p.y - (1 - p.life) * 60, 28 + (1 - p.life) * 6, p.color)
+      }
+      g.globalAlpha = 1
+    },
+  }
+}
+
+// ─── Runner ─────────────────────────────────────────────────────────────
+
+/** Mount `factory` on `canvas`. Returns a stop function that removes every listener. */
+export function run(canvas: HTMLCanvasElement, factory: Factory, env: Omit<Env, 'sfx' | 'fx'>): () => void {
+  const g = canvas.getContext('2d')!
+  let ended = false
+  const effects = createFx()
+  const fx = effects.fx
   const game = factory({
     ...env,
     sfx,
@@ -238,18 +298,7 @@ export function run(canvas: HTMLCanvasElement, factory: Factory, env: Omit<Env, 
     const dt = Math.min(1 / 30, (now - last) / 1000)
     last = now
     if (!ended) game.update(dt)
-    for (const p of particles) {
-      p.vy += 900 * dt
-      p.x += p.vx * dt
-      p.y += p.vy * dt
-      p.life -= dt
-    }
-    for (let i = particles.length - 1; i >= 0; i -= 1) if (particles[i].life <= 0) particles.splice(i, 1)
-    for (const p of pops) p.life -= dt * 0.9
-    while (pops.length && pops[0].life <= 0) pops.shift()
-    for (const r of ripples) r.life -= dt * 2.6
-    while (ripples.length && ripples[0].life <= 0) ripples.shift()
-    shakeAmt = Math.max(0, shakeAmt - dt * 2.5)
+    effects.step(dt)
     g.setTransform(1, 0, 0, 1, 0, 0)
     g.fillStyle = game.bg
     g.fillRect(0, 0, canvas.width, canvas.height)
@@ -258,28 +307,9 @@ export function run(canvas: HTMLCanvasElement, factory: Factory, env: Omit<Env, 
     g.beginPath()
     g.rect(0, 0, W, H)
     g.clip()
-    if (shakeAmt > 0) g.translate((Math.random() - 0.5) * shakeAmt * 16, (Math.random() - 0.5) * shakeAmt * 16)
+    effects.shake(g)
     game.draw(g)
-    for (const r of ripples) {
-      const progress = 1 - Math.max(0, r.life)
-      g.globalAlpha = Math.max(0, r.life) * 0.8
-      g.strokeStyle = r.color
-      g.lineWidth = 5 - progress * 3
-      g.beginPath()
-      g.arc(r.x, r.y, 10 + progress * 42, 0, Math.PI * 2)
-      g.stroke()
-    }
-    for (const p of particles) {
-      g.globalAlpha = Math.max(0, p.life / p.max)
-      g.fillStyle = p.color
-      g.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size)
-    }
-    g.globalAlpha = 1
-    for (const p of pops) {
-      g.globalAlpha = Math.min(1, p.life * 2)
-      text(g, p.label, p.x, p.y - (1 - p.life) * 60, 28 + (1 - p.life) * 6, p.color)
-    }
-    g.globalAlpha = 1
+    effects.draw(g)
     g.restore()
     raf = requestAnimationFrame(frame)
   }
@@ -289,8 +319,7 @@ export function run(canvas: HTMLCanvasElement, factory: Factory, env: Omit<Env, 
     if (!ended) {
       if (e.pointerType === 'touch') fx.vibrate(8)
       const [x, y] = toWorld(e)
-      ripples.push({ x, y, life: 1, color: e.pointerType === 'touch' ? '#7ef9ff' : '#ffd35c' })
-      if (ripples.length > 12) ripples.shift()
+      effects.ripple(x, y, e.pointerType === 'touch' ? '#7ef9ff' : '#ffd35c')
       game.down?.(x, y)
     }
   }

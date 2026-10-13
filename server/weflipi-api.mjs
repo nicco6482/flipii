@@ -3,13 +3,21 @@
 // stand-in for local dev and tests.
 // `handle` is framework-free so the Vercel function and the Vite dev middleware share it.
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
-import { AVATARS, COLORS, defaultLook, gameOfDay, msUntilNextDay, rankDay, seasonDays, seasonTable, shiftDay, today, validScore } from './weflipi-games.mjs'
+import { AVATARS, COLORS, defaultLook, gameById, gameOfDay, msUntilNextDay, rankDay, seasonDays, seasonTable, shiftDay, today, validScore } from './weflipi-games.mjs'
 
 export const MAX_GROUPS_PER_PLAYER = 10
 export const MAX_MEMBERS = 50
 const DAY_TTL = 60 * 86_400
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const codePattern = /^[A-Z2-9]{6}$/
+/** Challenges between friends ("retos"): same game, same seed, a few tries each. */
+export const RETO_TRIES = 3
+const RETO_TTL = 14 * 86_400
+const MY_RETOS = 12
+/** Real-time 1 vs 1 rooms only live while two phones find each other. */
+export const DUEL_GAMES = ['hockey', 'futbolin', 'pong', 'penaltis']
+const DUEL_TTL = 15 * 60
+const MAX_SDP = 12_000
 
 // ─── Stores ─────────────────────────────────────────────────────────────
 
@@ -106,6 +114,7 @@ export function memoryStore() {
         const score = Number(args[i])
         const m = args[i + 1]
         const old = z.get(m)
+        if (old !== undefined && flags.includes('NX')) continue
         if (old !== undefined && ((flags.includes('GT') && score <= old) || (flags.includes('LT') && score >= old))) continue
         if (old === score) continue
         z.set(m, score)
@@ -432,6 +441,137 @@ async function group(store, me, query, now) {
   }
 }
 
+// ─── Retos ──────────────────────────────────────────────────────────────
+
+async function createReto(store, me, body) {
+  const game = gameById(body.game)
+  if (!game) fail(400, 'bad_game')
+  const day = Math.floor(Date.now() / 86_400_000)
+  const [made] = await store.exec([['INCR', `wf:rl:reto:${me.id}:${day}`]])
+  await store.exec([['EXPIRE', `wf:rl:reto:${me.id}:${day}`, 172_800]])
+  if (made > 40) fail(429, 'slow_down')
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const code = newCode()
+    const [fresh] = await store.exec([['HSETNX', `wf:r:${code}`, 'game', game.id]])
+    if (!fresh) continue
+    const seed = randomBytes(4).readUInt32BE(0)
+    const created = Date.now()
+    await store.exec([
+      ['HSET', `wf:r:${code}`, 'owner', me.id, 'seed', seed, 'created', created],
+      ['EXPIRE', `wf:r:${code}`, RETO_TTL],
+      ['ZADD', `wf:p:${me.id}:r`, created, code],
+      ['EXPIRE', `wf:p:${me.id}:r`, RETO_TTL],
+    ])
+    return retoView(store, me, code)
+  }
+  return fail(503, 'busy')
+}
+
+async function retoView(store, me, code) {
+  const [[game, owner, seed, created], tries, scores] = await store.exec([
+    ['HMGET', `wf:r:${code}`, 'game', 'owner', 'seed', 'created'],
+    ['HGETALL', `wf:r:${code}:n`],
+    ['ZRANGE', `wf:r:${code}:s`, 0, -1, 'WITHSCORES'],
+  ])
+  if (!game) fail(404, 'no_reto')
+  const n = hash(tries)
+  const best = []
+  for (let i = 0; i < (scores?.length ?? 0); i += 2) best.push({ id: scores[i], score: Number(scores[i + 1]) })
+  const ids = [...new Set([owner, ...Object.keys(n), ...best.map(b => b.id)])]
+  const who = await people(store, ids)
+  const ranked = rankDay(game, best).map(({ id, score, place }) => ({ id, score, place, tries: Number(n[id] ?? 0), ...who[id] }))
+  const waiting = ids.filter(id => !best.some(b => b.id === id)).map(id => ({ id, score: null, place: null, tries: Number(n[id] ?? 0), ...who[id] }))
+  return { code, game, seed: Number(seed), owner, created: Number(created), maxTries: RETO_TRIES, myTries: Number(n[me.id] ?? 0), players: [...ranked, ...waiting] }
+}
+
+async function getReto(store, me, query) {
+  return retoView(store, me, readCode(query.code))
+}
+
+/** Every try counts from the moment it starts, so quitting a bad run doesn't give it back. */
+async function startReto(store, me, body) {
+  const code = readCode(body.code)
+  const [[game, created]] = await store.exec([['HMGET', `wf:r:${code}`, 'game', 'created']])
+  if (!game) fail(404, 'no_reto')
+  const [tries] = await store.exec([['HINCRBY', `wf:r:${code}:n`, me.id, 1]])
+  if (tries > RETO_TRIES) {
+    await store.exec([['HINCRBY', `wf:r:${code}:n`, me.id, -1]])
+    fail(409, 'no_tries')
+  }
+  await store.exec([
+    ['EXPIRE', `wf:r:${code}:n`, RETO_TTL],
+    ['ZADD', `wf:p:${me.id}:r`, 'NX', created ?? Date.now(), code],
+    ['EXPIRE', `wf:p:${me.id}:r`, RETO_TTL],
+  ])
+  return { tries: Number(tries), maxTries: RETO_TRIES }
+}
+
+async function retoScore(store, me, body) {
+  const code = readCode(body.code)
+  const [[game], tries, sent] = await store.exec([['HMGET', `wf:r:${code}`, 'game'], ['HGET', `wf:r:${code}:n`, me.id], ['HINCRBY', `wf:r:${code}:k`, me.id, 1]])
+  if (!game) fail(404, 'no_reto')
+  if (Number(sent) > Number(tries ?? 0)) {
+    await store.exec([['HINCRBY', `wf:r:${code}:k`, me.id, -1]])
+    fail(409, 'no_tries')
+  }
+  const score = Number(body.score)
+  if (!validScore(game, score)) fail(400, 'bad_score')
+  await store.exec([
+    ['ZADD', `wf:r:${code}:s`, gameById(game).dir === 'asc' ? 'LT' : 'GT', score, me.id],
+    ['EXPIRE', `wf:r:${code}:s`, RETO_TTL],
+    ['EXPIRE', `wf:r:${code}:k`, RETO_TTL],
+  ])
+  return retoView(store, me, code)
+}
+
+/** The challenges I made or joined, newest first. */
+async function myRetos(store, me) {
+  const [codes] = await store.exec([['ZRANGE', `wf:p:${me.id}:r`, 0, MY_RETOS - 1, 'REV']])
+  const views = await Promise.all(codes.map(code => retoView(store, me, code).catch(() => null)))
+  return { retos: views.filter(Boolean) }
+}
+
+// ─── 1 vs 1 in real time: the two phones swap WebRTC offers through here ───
+
+function readSdp(raw) {
+  if (typeof raw !== 'string' || !raw || raw.length > MAX_SDP) fail(400, 'bad_sdp')
+  return raw
+}
+
+async function createDuel(store, me, body) {
+  if (!DUEL_GAMES.includes(body.game)) fail(400, 'bad_game')
+  const offer = readSdp(body.offer)
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const code = newCode()
+    const [fresh] = await store.exec([['HSETNX', `wf:v:${code}`, 'game', body.game]])
+    if (!fresh) continue
+    await store.exec([['HSET', `wf:v:${code}`, 'offer', offer, 'host', me.id], ['EXPIRE', `wf:v:${code}`, DUEL_TTL]])
+    return { code }
+  }
+  return fail(503, 'busy')
+}
+
+async function getDuel(store, me, query) {
+  const code = readCode(query.code)
+  const [[game, offer, answer, host]] = await store.exec([['HMGET', `wf:v:${code}`, 'game', 'offer', 'answer', 'host']])
+  if (!game) fail(404, 'no_duel')
+  const who = await people(store, [host])
+  // The offer is only for the guest; the host just waits for the answer.
+  return host === me.id ? { code, game, answer: answer ?? null, host: who[host] } : { code, game, offer, taken: !!answer, host: who[host] }
+}
+
+async function answerDuel(store, me, body) {
+  const code = readCode(body.code)
+  const answer = readSdp(body.answer)
+  const [[game, host]] = await store.exec([['HMGET', `wf:v:${code}`, 'game', 'host']])
+  if (!game) fail(404, 'no_duel')
+  if (host === me.id) fail(409, 'own_duel')
+  const [fresh] = await store.exec([['HSETNX', `wf:v:${code}`, 'answer', answer]])
+  if (!fresh) fail(409, 'duel_taken')
+  await store.exec([['HSET', `wf:v:${code}`, 'guest', me.id]])
+  return { ok: true }
+}
+
 /**
  * One API request. `req` = { method, query, body, auth, ip }.
  * Returns { status, body }; never throws for client errors.
@@ -451,6 +591,14 @@ export async function handle(store, req, now = Date.now()) {
     if (req.method === 'POST' && action === 'joinGroup') return { status: 200, body: await joinGroup(store, me, body) }
     if (req.method === 'POST' && action === 'leaveGroup') return { status: 200, body: await leaveGroup(store, me, body) }
     if (req.method === 'POST' && action === 'score') return { status: 200, body: await submitScore(store, me, body, now) }
+    if (req.method === 'POST' && action === 'retoCreate') return { status: 200, body: await createReto(store, me, body) }
+    if (req.method === 'GET' && action === 'reto') return { status: 200, body: await getReto(store, me, req.query) }
+    if (req.method === 'POST' && action === 'retoStart') return { status: 200, body: await startReto(store, me, body) }
+    if (req.method === 'POST' && action === 'retoScore') return { status: 200, body: await retoScore(store, me, body) }
+    if (req.method === 'GET' && action === 'retos') return { status: 200, body: await myRetos(store, me) }
+    if (req.method === 'POST' && action === 'duelCreate') return { status: 200, body: await createDuel(store, me, body) }
+    if (req.method === 'GET' && action === 'duel') return { status: 200, body: await getDuel(store, me, req.query) }
+    if (req.method === 'POST' && action === 'duelAnswer') return { status: 200, body: await answerDuel(store, me, body) }
     return fail(404, 'not_found')
   } catch (error) {
     const status = error.status ?? 500
@@ -470,7 +618,7 @@ export async function nodeHandler(store, req, res) {
     let size = 0
     for await (const chunk of req) {
       size += chunk.length
-      if (size > 4096) break
+      if (size > 16_384) break
       chunks.push(chunk)
     }
     body = Buffer.concat(chunks).toString('utf8')
