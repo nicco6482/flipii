@@ -23,6 +23,7 @@ import { toques } from '../src/weflipi/games/toques'
 import { vasos } from '../src/weflipi/games/vasos'
 import { ecos } from '../src/weflipi/games/ecos'
 import { orbita } from '../src/weflipi/games/orbita'
+import { rebote } from '../src/weflipi/games/rebote'
 
 const sfx = { tone: () => undefined, noise: () => undefined }
 
@@ -146,6 +147,13 @@ describe('minigames', () => {
     expectValid('ecos', await play(ecos, (g, f) => {
       if (f === 0) tap(g, 110, 350)
       if (f > 100 && f % 24 === 0) tap(g, f % 48 ? 110 : 280, f % 72 ? 350 : 530)
+    }))
+  })
+
+  it('rebote keeps a ball in play and ends with a valid score', async () => {
+    expectValid('rebote', await play(rebote, (g, f) => {
+      if (f === 0) tap(g, W / 2, H - 100)
+      if (f % 18 === 0) g.move?.(W / 2 + Math.sin(f / 20) * 120, H - 100)
     }))
   })
 

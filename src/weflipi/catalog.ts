@@ -24,6 +24,7 @@ import { golf } from './games/golf'
 import { reflejos } from './games/reflejos'
 import { orbita } from './games/orbita'
 import { ecos } from './games/ecos'
+import { rebote } from './games/rebote'
 
 export type GameInfo = {
   id: GameId
@@ -64,4 +65,5 @@ export const CATALOG: Record<GameId, GameInfo> = {
   billar: { id: 'billar', name: 'Billar', emoji: '🎱', color: '#1fa463', how: 'Mete todas las bolas que puedas en 90 s. Arrastra atrás para apuntar; varias de un tiro suman más.', unit: n => `${n} pts`, factory: billar },
   orbita: { id: 'orbita', name: 'Órbita', emoji: '☄️', color: '#7ef9ff', how: 'Cambia de carril para esquivar las rocas espaciales. Cada metro cuenta.', unit: n => `${n} m`, factory: orbita },
   ecos: { id: 'ecos', name: 'Ecos', emoji: '🔊', color: '#ff6584', how: 'Mira cómo se iluminan los bloques y repite la secuencia. Cada pulso suma.', unit: n => plural(n, 'secuencia', 'secuencias'), factory: ecos },
+  rebote: { id: 'rebote', name: 'Rebote', emoji: '🏓', color: '#7ef9ff', how: 'Mueve la paleta, mantén viva la pelota y rompe todos los bloques.', unit: n => plural(n, 'bloque', 'bloques'), factory: rebote },
 }
