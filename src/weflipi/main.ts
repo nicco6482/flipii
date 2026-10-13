@@ -1,11 +1,12 @@
 // weflipi app shell: five tabs (Hoy, Grupos, Juegos, Ranking, Perfil), the game intro → countdown →
 // play → results flow, and the animated cover behind everything.
 import './hub.css'
-import { AVATARS, COLORS, daySeed, defaultLook, gameById, gameOfDay, isBetter, msUntilNextDay, PLACE_POINTS, today, type GameId } from '../../server/weflipi-games.mjs'
+import { AVATARS, COLORS, daySeed, defaultLook, gameById, gameOfDay, isBetter, msUntilNextDay, PLACE_POINTS, rankDay, today, type GameId } from '../../server/weflipi-games.mjs'
 import * as api from './api'
 import { CATALOG } from './catalog'
 import { startCover } from './cover'
 import { mulberry, muted, run, setMuted, sfx } from './engine'
+import { createVersus, DUELS } from './versus'
 import { apkStepsHtml, canPrompt, downloadApk, isInstalled, nativeShare, onInstallChange, platform, promptInstall, registerServiceWorker, showIosGuide, stepsHtml } from './install'
 
 const AUTHOR = 'nicco6482'
@@ -46,8 +47,9 @@ type View = {
   global: api.Global | null
   globalError: string
   gameSearch: string
+  retos: api.Reto[] | null
 }
-const view: View = { tab: tabFromHash(), state: null, error: '', errorDetail: '', group: null, groupError: '', groupTab: 'hoy', selected: '', global: null, globalError: '', gameSearch: '' }
+const view: View = { tab: tabFromHash(), state: null, error: '', errorDetail: '', group: null, groupError: '', groupTab: 'hoy', selected: '', global: null, globalError: '', gameSearch: '', retos: null }
 let deadline = Date.now() + msUntilNextDay()
 let stopGame: (() => void) | null = null
 let welcome = false
@@ -247,6 +249,15 @@ function go(tab: Tab): void {
 async function loadForTab(): Promise<void> {
   if ((view.tab === 'hoy' || view.tab === 'grupos') && view.selected) await loadGroup(view.selected)
   if (view.tab === 'ranking') await loadGlobal()
+  if (view.tab === 'juegos') await loadRetos()
+}
+
+async function loadRetos(): Promise<void> {
+  if (!api.savedPlayer()) return
+  const r = await api.myRetos()
+  if (!r.ok) return
+  view.retos = r.data.retos
+  if (view.tab === 'juegos') render()
 }
 
 // ─── Hoy ────────────────────────────────────────────────────────────────
@@ -275,6 +286,10 @@ function screenHoy(): string {
       <button class="btn primary big pulse" data-action="intro" data-game="${g.id}">▶ ${best === null ? 'JUGAR' : 'MEJORAR'}</button>
       <p class="hint">Intentos ilimitados hasta medianoche. Cuenta tu mejor partida.</p>
     </section>
+    <button class="card versus-cta" data-action="tab" data-tab="juegos">
+      <span class="vs-icons">${DUELS.map(d => d.emoji).join('')}</span>
+      <div><b>⚔️ Pícate con un amigo</b><small>1 contra 1 en directo o retos en cualquier juego</small></div><span class="go">→</span>
+    </button>
     ${groups.length ? groupSnippet() : `
     <section class="card cta">
       <span class="big-emoji">👥</span>
@@ -496,7 +511,13 @@ function screenJuegos(): string {
   const count = list.filter(x => !query || searchKey(`${x.name} ${x.how}`).includes(query)).length
   return `
     <div class="screen-head"><h1>Juegos</h1></div>
-    <p class="muted lead-in">El reto diario entra en la clasificación. El resto está abierto para entrenar y probar tu próxima especialidad.</p>
+    <section class="card versus">
+      <div class="section-head"><h2>⚔️ 1 contra 1 en directo</h2><button class="btn small" data-action="duel-code">🔑 Tengo código</button></div>
+      <p class="muted small">En el mismo móvil, cada uno por un lado, o cada uno con el suyo.</p>
+      <div class="duel-cards">${DUELS.map(d => `<button class="duel-card" style="--accent:${d.color}" data-action="duel" data-duel="${d.id}"><span>${d.emoji}</span><b>${esc(d.name)}</b></button>`).join('')}</div>
+    </section>
+    ${retosSection()}
+    <p class="muted lead-in">El reto diario entra en la clasificación. El resto está abierto para entrenar o para <b>retar a un amigo</b> con ⚔️.</p>
     <div class="games-toolbar">
       <label class="games-search"><span aria-hidden="true">⌕</span><input data-el="game-search" type="search" value="${esc(view.gameSearch)}" placeholder="Buscar en la colección" aria-label="Buscar juegos" autocomplete="off" /></label>
       <span class="games-count" data-el="games-count">${count} ${count === 1 ? 'juego' : 'juegos'}</span>
@@ -508,6 +529,26 @@ function screenJuegos(): string {
       )
       .join('')}</div>
     <p class="games-empty muted" data-el="games-empty" ${count ? 'hidden' : ''}>No hay juegos que coincidan. Prueba con otro nombre.</p>`
+}
+
+function retosSection(): string {
+  const list = view.retos ?? []
+  const myId = me()?.id
+  const rows = list
+    .map(r => {
+      const g = CATALOG[r.game]
+      const lead = r.players[0]
+      const mine = r.players.find(p => p.id === myId)
+      const status = !mine || mine.score === null ? (r.myTries < r.maxTries ? '¡Te toca!' : 'Sin intentos') : mine.place === 1 ? '👑 Vas 1º' : `Vas ${mine.place}º`
+      return `<li data-action="reto" data-code="${r.code}"><span class="place">${g.emoji}</span><span class="name">${esc(g.name)}<small>${r.players.length} ${r.players.length === 1 ? 'jugador' : 'jugadores'}${lead?.score !== null && lead ? ` · lidera ${esc(lead.name)}` : ''}</small></span><b>${esc(status)}</b></li>`
+    })
+    .join('')
+  return `
+    <section class="card">
+      <div class="section-head"><h2>🎯 Retos</h2></div>
+      <p class="muted small">Elige cualquier juego y dale a <b>⚔️ Retar</b>: por turnos en este móvil o mandando un enlace. Mismo nivel para todos y 3 intentos cada uno.</p>
+      ${rows ? `<ol class="ranking retos">${rows}</ol>` : ''}
+    </section>`
 }
 
 // ─── Ranking mundial ────────────────────────────────────────────────────
@@ -629,6 +670,14 @@ async function refresh(): Promise<void> {
   const groups = view.state?.groups ?? []
   if (groups.length && !groups.some(x => x.code === view.selected)) remember(groups[0].code)
   render()
+  const params = new URLSearchParams(location.search)
+  const reto = params.get('reto')
+  const duelo = params.get('duelo')
+  if ((reto || duelo) && api.savedPlayer()) {
+    history.replaceState(null, '', location.pathname + location.hash)
+    if (reto) void openReto(reto)
+    if (duelo) void versus.join(duelo.toUpperCase())
+  }
   await loadForTab()
 }
 
@@ -650,7 +699,7 @@ function intro(id: GameId): void {
       <p>${esc(g.how)}</p>
       ${best !== null ? `<div class="pill">Tu mejor hoy: <b>${esc(g.unit(best))}</b></div>` : ''}
     </div>
-    <button class="btn primary big pulse" data-go>¡JUGAR!</button>`
+    <div class="intro-actions"><button class="btn primary big pulse" data-go>¡JUGAR!</button><button class="btn" data-versus>⚔️ Retar a un amigo</button></div>`
   document.body.appendChild(wrap)
   document.body.classList.add('is-playing')
   const close = () => {
@@ -658,6 +707,7 @@ function intro(id: GameId): void {
     document.body.classList.remove('is-playing')
   }
   wrap.querySelector('[data-close]')!.addEventListener('click', close)
+  wrap.querySelector('[data-versus]')!.addEventListener('click', () => retoMenu(id))
   wrap.querySelector('[data-go]')!.addEventListener('click', () => {
     sfx.tone(440, 1)
     wrap.remove()
@@ -669,12 +719,17 @@ function intro(id: GameId): void {
   })
 }
 
-function play(id: GameId, counts: boolean): void {
+/** A run outside the daily flow (retos): its own seed, label and ending. */
+type Custom = { seed: number; tag: string; onEnd: (score: number, screen: HTMLElement, quit: () => void) => void; onQuit?: () => void }
+
+function play(id: GameId, mode: boolean | Custom): void {
   const info = CATALOG[id]
+  const custom = typeof mode === 'object' ? mode : null
+  const counts = mode === true
   const screen = document.createElement('div')
   screen.className = 'play'
   screen.innerHTML = `
-    <div class="play-bar"><button class="icon-btn" data-quit aria-label="Salir">✕</button><b>${info.emoji} ${esc(info.name)}${counts ? '' : ' <small>entreno</small>'}</b><span data-score></span></div>
+    <div class="play-bar"><button class="icon-btn" data-quit aria-label="Salir">✕</button><b>${info.emoji} ${esc(info.name)}${custom ? ` <small>${esc(custom.tag)}</small>` : counts ? '' : ' <small>entreno</small>'}</b><span data-score></span></div>
     <canvas></canvas>
     <div class="count" data-count></div>`
   document.body.appendChild(screen)
@@ -694,14 +749,17 @@ function play(id: GameId, counts: boolean): void {
     cover.pause(false)
     void refresh()
   }
-  screen.querySelector('[data-quit]')!.addEventListener('click', quit)
-  const seed = daySeed(day()) ^ [...id].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619), 2166136261)
+  screen.querySelector('[data-quit]')!.addEventListener('click', () => {
+    quit()
+    custom?.onQuit?.()
+  })
+  const seed = custom ? custom.seed : daySeed(day()) ^ [...id].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619), 2166136261)
   // The game is drawn from the start (all games idle until the first input), but the countdown
   // overlay swallows taps and keys until ¡YA!.
   stopGame = run(canvas, info.factory!, {
     rand: mulberry(seed),
     score: n => (scoreEl.textContent = info.unit(n)),
-    end: score => void finish(screen, id, score, counts, () => {
+    end: score => custom ? custom.onEnd(score, screen, quit) : void finish(screen, id, score, counts, () => {
       quit()
       play(id, counts)
     }, quit),
@@ -858,6 +916,9 @@ app.addEventListener('click', async e => {
     render()
   } else if (action === 'share-app') void shareApp()
   else if (action === 'intro') intro(el.dataset.game as GameId)
+  else if (action === 'duel') versus.menu(el.dataset.duel!)
+  else if (action === 'duel-code') versus.askCode()
+  else if (action === 'reto') void openReto(el.dataset.code!)
   else if (action === 'group') {
     view.groupTab = 'hoy'
     remember(el.dataset.code!)
@@ -958,6 +1019,289 @@ async function share(code: string, name: string): Promise<void> {
   }
 }
 
+async function shareText(textMsg: string, url: string, copied: string): Promise<void> {
+  if (nativeShare(`${textMsg} ${url}`)) return
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'weflipi', text: textMsg, url })
+      return
+    } catch {
+      /* cancelled: fall back to copying */
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(`${textMsg} ${url}`)
+    toast(copied)
+  } catch {
+    modal('Pásale este enlace', `<input readonly value="${esc(url)}" />`, () => null, 'Hecho')
+  }
+}
+
+const versus = createVersus({
+  esc,
+  toast,
+  myName: () => me()?.name ?? 'Yo',
+  online: () => api.savedPlayer()?.id ?? null,
+  pauseCover: on => cover.pause(on),
+  share: shareText,
+  confetti,
+})
+
+// ─── Retos: same game and seed for everyone, by turns on one phone or by link ───
+
+function sheetEl(html: string): { el: HTMLElement; close: () => void } {
+  const wrap = document.createElement('div')
+  wrap.className = 'sheet-wrap'
+  wrap.innerHTML = `<div class="sheet"><span class="grab"></span>${html}</div>`
+  document.body.appendChild(wrap)
+  const close = () => {
+    wrap.classList.add('is-out')
+    setTimeout(() => wrap.remove(), 200)
+  }
+  wrap.addEventListener('pointerdown', e => e.target === wrap && close())
+  wrap.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', close))
+  return { el: wrap, close }
+}
+
+function closeIntro(): void {
+  document.querySelector('.intro')?.remove()
+  if (!stopGame) document.body.classList.remove('is-playing')
+}
+
+function retoMenu(id: GameId): void {
+  const g = CATALOG[id]
+  const live = DUELS.find(d => d.id === id)
+  const s = sheetEl(`
+    <div class="duel-head" style="--accent:${g.color}"><span class="big-emoji">${g.emoji}</span><div><h2>Retar a ${esc(g.name)}</h2><p class="muted">Mismo nivel para todos. Gana quien saque mejor marca.</p></div></div>
+    ${live ? `<button class="btn primary" data-live>🎮 1 contra 1 en directo</button>` : ''}
+    ${g.factory ? `<button class="btn ${live ? '' : 'primary'}" data-turns>📱 En este móvil, por turnos</button>` : ''}
+    <button class="btn" data-link>🔗 Mandar reto por enlace</button>
+    <p class="muted small center">Por enlace: cada uno juega en su móvil cuando quiera, con 3 intentos. El reto dura 14 días.</p>
+    <button class="btn ghost" data-close>Cancelar</button>`)
+  s.el.querySelector('[data-live]')?.addEventListener('click', () => {
+    s.close()
+    closeIntro()
+    versus.menu(id)
+  })
+  s.el.querySelector('[data-turns]')?.addEventListener('click', () => {
+    s.close()
+    turnsSetup(id)
+  })
+  s.el.querySelector<HTMLButtonElement>('[data-link]')!.addEventListener('click', async e => {
+    if (!api.savedPlayer()) return toast(api.errorText(view.error || 'offline'))
+    const btn = e.currentTarget as HTMLButtonElement
+    btn.disabled = true
+    const r = await api.createReto(id)
+    btn.disabled = false
+    if (!r.ok) return toast(api.errorText(r.error))
+    s.close()
+    closeIntro()
+    view.retos = null
+    void openReto(r.data.code, r.data)
+  })
+}
+
+/** Pass-the-phone: 2 to 4 players, one run each on the same level. */
+function turnsSetup(id: GameId): void {
+  const g = CATALOG[id]
+  const saved = store.get('weflipi.turnNames').split('|')
+  const names = [me()?.name ?? 'Jugador 1', saved[1] || 'Jugador 2', saved[2] || '', saved[3] || '']
+  modal(
+    `${g.emoji} ${g.name} por turnos`,
+    `<p class="muted small">Pon los nombres (2 a 4). Cada uno juega una vez, pasándoos el móvil.</p>
+     ${names.map((n, i) => `<input name="p${i}" maxlength="16" placeholder="${i < 2 ? `Jugador ${i + 1}` : 'Jugador (opcional)'}" value="${esc(n)}" ${i < 2 ? 'required' : ''} />`).join('')}`,
+    f => {
+      const list = [0, 1, 2, 3].map(i => String(f.get(`p${i}`) ?? '').trim().slice(0, 16)).filter(Boolean)
+      if (list.length < 2) return 'Hacen falta al menos 2 jugadores.'
+      store.set('weflipi.turnNames', list.join('|'))
+      closeIntro()
+      turns(id, list, (Math.random() * 2 ** 32) >>> 0)
+      return null
+    },
+    '¡Empezar!',
+  )
+}
+
+function turns(id: GameId, names: string[], seed: number, scores: number[] = []): void {
+  const g = CATALOG[id]
+  const i = scores.length
+  if (i === names.length) return turnsResult(id, names, scores)
+  const wrap = document.createElement('div')
+  wrap.className = 'intro'
+  wrap.style.setProperty('--accent', g.color)
+  wrap.innerHTML = `
+    <button class="icon-btn close" data-close aria-label="Cerrar">✕</button>
+    <div class="intro-body">
+      <span class="tag">${g.emoji} ${esc(g.name)} · turno ${i + 1} de ${names.length}</span>
+      <span class="intro-emoji">📱</span>
+      <h1>${esc(names[i])}</h1>
+      <p>${i === 0 ? 'Empiezas tú.' : `Pásale el móvil a <b>${esc(names[i])}</b>.`}</p>
+      ${scores.length ? `<div class="pill">A batir: <b>${esc(g.unit(scores.reduce((a, b) => (isBetter(id, b, a) ? b : a))))}</b></div>` : ''}
+      <p class="muted small">${esc(g.how)}</p>
+    </div>
+    <button class="btn primary big pulse" data-go>¡ESTOY LISTO!</button>`
+  document.body.appendChild(wrap)
+  document.body.classList.add('is-playing')
+  wrap.querySelector('[data-close]')!.addEventListener('click', () => {
+    wrap.remove()
+    document.body.classList.remove('is-playing')
+  })
+  wrap.querySelector('[data-go]')!.addEventListener('click', () => {
+    wrap.remove()
+    play(id, {
+      seed,
+      tag: names[i],
+      onEnd: (score, screen, quit) => {
+        const overlay = document.createElement('div')
+        overlay.className = 'results'
+        overlay.style.setProperty('--accent', g.color)
+        const last = i + 1 === names.length
+        overlay.innerHTML = `<div class="results-card"><span class="eyebrow">${esc(names[i])}</span><span class="results-emoji">${g.emoji}</span><div class="big-score">${esc(g.unit(score))}</div>
+          <button class="btn primary" data-next>${last ? '🏆 Ver quién gana' : `Siguiente: ${esc(names[i + 1])} →`}</button></div>`
+        screen.appendChild(overlay)
+        overlay.querySelector('[data-next]')!.addEventListener('click', () => {
+          quit()
+          turns(id, names, seed, [...scores, score])
+        })
+      },
+    })
+  })
+}
+
+function turnsResult(id: GameId, names: string[], scores: number[]): void {
+  const g = CATALOG[id]
+  const ranked = rankDay(id, scores.map((score, i) => ({ id: String(i), score })))
+  const colors = ['#ffd35c', '#ff5f7e', '#7ef9ff', '#2bd47d']
+  const rows = ranked.map(r => ({ id: r.id, place: r.place, name: names[Number(r.id)], avatar: names[Number(r.id)].slice(0, 1).toUpperCase(), color: colors[Number(r.id)], score: r.score }))
+  const winners = rows.filter(r => r.place === 1).map(r => r.name)
+  const wrap = document.createElement('div')
+  wrap.className = 'intro'
+  wrap.style.setProperty('--accent', g.color)
+  wrap.innerHTML = `
+    <canvas class="confetti"></canvas>
+    <button class="icon-btn close" data-close aria-label="Cerrar">✕</button>
+    <div class="intro-body">
+      <span class="tag">${g.emoji} ${esc(g.name)} · por turnos</span>
+      <h1>${winners.length > 1 ? '¡Empate!' : `¡Gana ${esc(winners[0])}!`}</h1>
+      <div class="card wide">${podium(rows.slice(0, 3), r => g.unit(r.score))}
+      ${rows.length > 3 ? `<ol class="ranking">${rows.slice(3).map(r => rankRow(r, esc(g.unit(r.score)))).join('')}</ol>` : ''}</div>
+    </div>
+    <div class="intro-actions"><button class="btn primary big" data-again>↻ Revancha</button><button class="btn ghost" data-close2>Salir</button></div>`
+  document.body.appendChild(wrap)
+  document.body.classList.add('is-playing')
+  confetti(wrap.querySelector('canvas')!)
+  const close = () => {
+    wrap.remove()
+    document.body.classList.remove('is-playing')
+  }
+  wrap.querySelector('[data-close]')!.addEventListener('click', close)
+  wrap.querySelector('[data-close2]')!.addEventListener('click', close)
+  wrap.querySelector('[data-again]')!.addEventListener('click', () => {
+    wrap.remove()
+    turns(id, names, (Math.random() * 2 ** 32) >>> 0)
+  })
+}
+
+/** A challenge by link: who's in, everyone's best, and your tries. */
+async function openReto(rawCode: string, preloaded?: api.Reto): Promise<void> {
+  const code = rawCode.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  let reto = preloaded
+  if (!reto) {
+    const r = await api.getReto(code)
+    if (!r.ok) return toast(api.errorText(r.error))
+    reto = r.data
+  }
+  document.querySelector('.intro.reto')?.remove()
+  const g = CATALOG[reto.game]
+  const owner = reto.players.find(p => p.id === reto!.owner)
+  const left = reto.maxTries - reto.myTries
+  const myId = me()?.id
+  const scored = reto.players.filter(p => p.score !== null) as (api.RetoPlayer & { score: number; place: number })[]
+  const waiting = reto.players.filter(p => p.score === null)
+  const wrap = document.createElement('div')
+  wrap.className = 'intro reto'
+  wrap.style.setProperty('--accent', g.color)
+  wrap.innerHTML = `
+    <button class="icon-btn close" data-close aria-label="Cerrar">✕</button>
+    <div class="intro-body">
+      <span class="tag">🎯 Reto de ${esc(owner?.name ?? '¿?')} · código ${esc(reto.code)}</span>
+      <span class="intro-emoji small">${g.emoji}</span>
+      <h1>${esc(g.name)}</h1>
+      <div class="card wide">
+        ${scored.length ? podium(scored.slice(0, 3), r => g.unit(r.score)) : '<p class="muted">Nadie ha marcado todavía. ¡Pon tú el listón!</p>'}
+        ${scored.length > 3 ? `<ol class="ranking">${scored.slice(3).map(r => rankRow(r, esc(g.unit(r.score)), `${r.tries}/${reto!.maxTries} intentos`)).join('')}</ol>` : ''}
+        ${waiting.length ? `<h4>Sin marca todavía</h4><div class="pending">${waiting.map(m => `<span>${ava(m, 'sm')}${esc(m.name)}${m.id === myId ? ' (tú)' : ''}</span>`).join('')}</div>` : ''}
+      </div>
+      <p class="muted small">${esc(g.how)}</p>
+    </div>
+    <div class="intro-actions">
+      <button class="btn primary big ${left ? 'pulse' : ''}" data-go ${left ? '' : 'disabled'}>${left ? `▶ JUGAR · ${left} ${left === 1 ? 'intento' : 'intentos'}` : 'Sin intentos'}</button>
+      <button class="btn" data-share>📨 Invitar a más amigos</button>
+    </div>`
+  document.body.appendChild(wrap)
+  document.body.classList.add('is-playing')
+  const close = () => {
+    wrap.remove()
+    document.body.classList.remove('is-playing')
+    if (view.tab === 'juegos') void loadRetos()
+  }
+  wrap.querySelector('[data-close]')!.addEventListener('click', close)
+  wrap.querySelector('[data-share]')!.addEventListener('click', () => {
+    const lead = scored[0]
+    const brag = lead ? ` ${lead.name} va primero con ${g.unit(lead.score)}.` : ''
+    void shareText(`¡Te reto a ${g.name} ${g.emoji} en weflipi!${brag} ¿Me ganas?`, `${location.origin}/?reto=${reto!.code}`, 'Enlace del reto copiado. ¡Pásaselo!')
+  })
+  wrap.querySelector<HTMLButtonElement>('[data-go]')!.addEventListener('click', async e => {
+    if (reto!.game === 'helix') {
+      // Helix Drift is its own page; it starts each try itself.
+      location.href = `./helix.html?reto=${reto!.code}`
+      return
+    }
+    const btn = e.currentTarget as HTMLButtonElement
+    btn.disabled = true
+    const r = await api.startReto(reto!.code)
+    if (!r.ok) {
+      btn.disabled = false
+      return toast(api.errorText(r.error))
+    }
+    sfx.tone(440, 1)
+    wrap.remove()
+    play(reto!.game, {
+      seed: reto!.seed,
+      tag: `reto · intento ${r.data.tries}/${r.data.maxTries}`,
+      onQuit: () => void openReto(reto!.code),
+      onEnd: async (score, screen, quit) => {
+        const overlay = document.createElement('div')
+        overlay.className = 'results'
+        overlay.style.setProperty('--accent', g.color)
+        overlay.innerHTML = `<canvas class="confetti"></canvas><div class="results-card"><span class="eyebrow">Reto · intento ${r.data.tries}/${r.data.maxTries}</span><span class="results-emoji">${g.emoji}</span><div class="big-score">${esc(g.unit(score))}</div>
+          <div class="results-status" data-status><p class="muted">Guardando…</p></div>
+          <button class="btn primary" data-next>Ver el reto →</button></div>`
+        screen.appendChild(overlay)
+        overlay.querySelector('[data-next]')!.addEventListener('click', () => {
+          quit()
+          void openReto(reto!.code, fresh ?? undefined)
+        })
+        let fresh: api.Reto | null = null
+        const saved = await api.retoScore(reto!.code, score)
+        const status = overlay.querySelector<HTMLElement>('[data-status]')!
+        if (!saved.ok) {
+          status.innerHTML = `<p class="form-error">${esc(api.errorText(saved.error))}</p>`
+          return
+        }
+        fresh = saved.data
+        const mine = saved.data.players.find(p => p.id === myId)
+        const scoredNow = saved.data.players.filter(p => p.score !== null).length
+        if (mine?.place === 1) {
+          confetti(overlay.querySelector('canvas')!)
+          buzz(40)
+        }
+        status.innerHTML = mine?.place ? `<div class="pill">${medal(mine.place)} Vas ${mine.place}º de ${scoredNow} · tu mejor: <b>${esc(g.unit(mine.score!))}</b></div>` : ''
+      },
+    })
+  })
+}
+
 addEventListener('hashchange', () => {
   const t = tabFromHash()
   if (t !== view.tab) go(t)
@@ -980,4 +1324,4 @@ registerServiceWorker()
 onInstallChange(() => render())
 
 void refresh()
-;(window as unknown as { __weflipi: unknown }).__weflipi = { view, play, intro }
+;(window as unknown as { __weflipi: unknown }).__weflipi = { view, play, intro, versus, openReto, turns }

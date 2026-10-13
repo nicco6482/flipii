@@ -393,3 +393,44 @@ button.link { font: inherit; font-weight: 800; font-size: 14px; }
 /* On iOS 26 the ⋯ button sits at the bottom right of Safari. */
 .safari-pointer { left: auto; right: calc(10px + env(safe-area-inset-right)); transform: none; }
 @keyframes point { 50% { transform: translateY(10px); } }
+
+/* ─── 1 contra 1 y retos ─────────────────────────────────────────────── */
+.center { text-align: center; }
+.sheet .muted.small { margin: -6px 0 0; }
+.versus-cta { flex-direction: row; align-items: center; gap: 12px; text-align: left; color: inherit; background: linear-gradient(120deg, rgba(255, 95, 126, 0.35), rgba(36, 32, 74, 0.94) 55%); border-color: var(--ink); }
+.versus-cta div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.versus-cta b { font-family: var(--display); font-size: 17px; }
+.versus-cta small { color: var(--muted); font-weight: 700; }
+.versus-cta .go { font-family: var(--display); font-weight: 900; font-size: 22px; color: var(--gold); }
+.vs-icons { font-size: 22px; letter-spacing: -0.15em; display: grid; grid-template-columns: 1fr 1fr; line-height: 1.1; }
+.versus { background: linear-gradient(160deg, rgba(255, 95, 126, 0.28), rgba(36, 32, 74, 0.94) 60%); }
+.duel-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.duel-card { border: 3px solid var(--ink); border-radius: 18px; padding: 10px 4px 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 45%, #24204a), #24204a 75%); box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35); transition: transform 0.1s; }
+.duel-card:active { transform: translateY(3px) scale(0.97); }
+.duel-card span { font-size: 34px; line-height: 1; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.3)); }
+.duel-card b { font-family: var(--display); font-size: 12px; line-height: 1.15; }
+.duel-head { display: flex; align-items: center; gap: 12px; }
+.duel-head h2 { font-size: 20px; }
+.duel-head p { margin: 2px 0 0; font-size: 13px; line-height: 1.35; }
+.duel-code { font: 900 42px/1 var(--display); letter-spacing: 0.18em; text-align: center; color: var(--gold); background: var(--ink); border-radius: 18px; padding: 14px 0 12px; }
+.dots::after { content: ''; animation: dots 1.2s steps(4) infinite; }
+@keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+.duel .play-bar b { flex: none; }
+.duel-names { flex: 1; text-align: right; font-weight: 800; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.duel-names i { font-style: normal; }
+.duel-names small { color: var(--muted); margin: 0 3px; }
+.duel-title { font-size: 30px; font-style: italic; paint-order: stroke fill; -webkit-text-stroke: 0.1em var(--ink); }
+.duel-score { display: flex; align-items: center; gap: 14px; font: 900 56px/1 var(--display); paint-order: stroke fill; -webkit-text-stroke: 0.1em var(--ink); }
+.duel-score span { color: var(--muted); font-size: 36px; }
+/* On a shared phone the player at the top reads the winner upside down. */
+.duel-flip { position: absolute; top: 18px; left: 0; right: 0; text-align: center; transform: rotate(180deg); font: 900 30px/1 var(--display); font-style: italic; paint-order: stroke fill; -webkit-text-stroke: 0.1em var(--ink); }
+.intro-actions { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.intro-actions .btn { width: min(440px, 100%); }
+.intro .confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.intro-emoji.small { font-size: 70px; }
+.intro .card.wide { width: min(440px, 100%); text-align: left; }
+.intro.reto, .intro.turns { overflow-y: auto; }
+.intro.reto .intro-body { justify-content: flex-start; padding-top: 4px; }
+.intro.reto h1 { font-size: 38px; }
+.ranking.retos li { cursor: pointer; }
+.ranking.retos li b { font-size: 13px; }

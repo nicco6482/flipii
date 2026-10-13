@@ -104,6 +104,19 @@ export const leaveGroup = (code: string) => call<{ ok: true }>('POST', 'leaveGro
 export const submitScore = (game: GameId, score: number) => call<ScoreResult>('POST', 'score', { game, score })
 export const getGlobal = () => call<Global>('GET', 'global')
 
+export type RetoPlayer = Look & { id: string; score: number | null; place: number | null; tries: number }
+export type Reto = { code: string; game: GameId; seed: number; owner: string; created: number; maxTries: number; myTries: number; players: RetoPlayer[] }
+export const createReto = (game: GameId) => call<Reto>('POST', 'retoCreate', { game })
+export const getReto = (code: string) => call<Reto>('GET', 'reto', undefined, { code })
+export const startReto = (code: string) => call<{ tries: number; maxTries: number }>('POST', 'retoStart', { code })
+export const retoScore = (code: string, score: number) => call<Reto>('POST', 'retoScore', { code, score })
+export const myRetos = () => call<{ retos: Reto[] }>('GET', 'retos')
+
+export type DuelRoom = { code: string; game: string; host: Look; offer?: string; answer?: string | null; taken?: boolean }
+export const createDuel = (game: string, offer: string) => call<{ code: string }>('POST', 'duelCreate', { game, offer })
+export const getDuel = (code: string) => call<DuelRoom>('GET', 'duel', undefined, { code })
+export const answerDuel = (code: string, answer: string) => call<{ ok: true }>('POST', 'duelAnswer', { code, answer })
+
 export async function updateProfile(change: Partial<Look>): Promise<Result<Look>> {
   const r = await call<Look>('POST', 'profile', change)
   const p = savedPlayer()
@@ -142,5 +155,13 @@ export const ERRORS: Record<string, string> = {
   bad_color: 'Ese color no existe.',
   slow_down: 'Demasiados intentos, espera un poco.',
   unauthorized: 'Tu sesión ha caducado. Vuelve a poner tu nombre.',
+  bad_game: 'Ese juego no existe.',
+  no_reto: 'Ese reto no existe o ya ha caducado.',
+  no_tries: 'Ya has gastado tus intentos en este reto.',
+  no_duel: 'Esa partida ya no existe. Pídele a tu amigo un código nuevo.',
+  duel_taken: 'Alguien ya se ha unido a esa partida.',
+  own_duel: 'Esa partida la has creado tú: pásale el código a tu amigo.',
+  bad_sdp: 'No se ha podido preparar la conexión.',
+  no_connect: 'No se han podido conectar los dos móviles. Probad en la misma wifi o con datos.',
 }
 export const errorText = (code: string) => ERRORS[code] ?? 'Algo ha fallado. Inténtalo otra vez.'

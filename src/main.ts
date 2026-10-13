@@ -14,7 +14,7 @@ import { Leaderboard, cleanName, type BoardData, type Receipt } from './online/l
 import { challengeUrl, copyText, drawCard, readChallenge } from './online/share'
 import { AUTHOR, UI } from './ui/ui'
 import { gameOfDay, today as weflipiToday } from '../server/weflipi-games.mjs'
-import { errorText, savedPlayer, submitScore } from './weflipi/api'
+import { errorText, getReto, retoScore, savedPlayer, startReto, submitScore } from './weflipi/api'
 
 async function boot(): Promise<void> {
   const save = new SaveStore()
@@ -28,6 +28,11 @@ async function boot(): Promise<void> {
   applyVolumes()
   const lb = new Leaderboard()
   const challenge = readChallenge()
+  // A weflipi reto: everyone plays the same tower (the reto's seed), 3 tries each.
+  const retoCode = new URLSearchParams(location.search).get('reto')?.toUpperCase().replace(/[^A-Z0-9]/g, '') ?? ''
+  const reto = retoCode && savedPlayer() ? await getReto(retoCode) : null
+  const retoSeed = reto?.ok && reto.data.game === 'helix' ? reto.data.seed : null
+  const backToReto = `<a class="btn" href="./?reto=${retoCode}">Ver el reto →</a>`
 
   const handlers: Record<string, (el: HTMLElement) => void> = {}
   const ui = new UI(i18n, save, input, handlers)
@@ -83,7 +88,13 @@ async function boot(): Promise<void> {
     ui.clearPopups()
     if (ui.modal) ui.closeModal()
     game.personalBest = save.data.best
-    if (kind === 'daily') {
+    if (retoSeed !== null) {
+      game.start('practice', retoSeed, '')
+      void startReto(retoCode).then(r => {
+        // Out of tries: back to the reto page instead of playing a run that can't count.
+        if (!r.ok && r.error === 'no_tries') location.href = `./?reto=${retoCode}`
+      })
+    } else if (kind === 'daily') {
       day = weflipiToday()
       game.start('daily', dailySeed(day), day)
     } else {
@@ -99,7 +110,8 @@ async function boot(): Promise<void> {
     if (ui.modal) ui.closeModal()
     ui.clearPopups()
     day = weflipiToday()
-    game.toTitle('daily', dailySeed(day), day)
+    if (retoSeed !== null) game.toTitle('practice', retoSeed, '')
+    else game.toTitle('daily', dailySeed(day), day)
     refreshTitle()
     ui.show('title')
   }
@@ -135,6 +147,19 @@ async function boot(): Promise<void> {
     }
     // A short beat to watch the crash; Space restarts instantly even before the panel appears.
     resultsTimer = window.setTimeout(show, run.outcome === 'won' ? 1400 : 750)
+    if (retoSeed !== null) {
+      ui.setOnline(`<p class="muted">Guardando en el reto…</p>`)
+      void retoScore(retoCode, run.score).then(r => {
+        if (lastRun !== run) return
+        const mine = r.ok ? r.data.players.find(p => p.id === savedPlayer()?.id) : null
+        ui.setOnline(
+          r.ok
+            ? `<div class="rank-main"><span>Reto · vas <b>${mine?.place ?? '?'}º</b> · tu mejor <b>${mine?.score ?? run.score}</b></span><small>${r.data.myTries}/${r.data.maxTries} intentos</small></div>${backToReto}`
+            : `<p class="muted">${errorText(r.error)}</p>${backToReto}`,
+        )
+      })
+      return
+    }
     if (run.kind === 'practice') {
       ui.setOnline(`<p class="muted">${t('results.practice')}</p>`)
       return
